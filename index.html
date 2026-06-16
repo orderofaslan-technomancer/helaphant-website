@@ -1,0 +1,1175 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>WAR HELAPHANT — HEL</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+    <script src="https://js.stripe.com/v3/"></script>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css">
+    <style>
+        @import url('https://fonts.googleapis.com/css2?family=Playfair+Display:wght@700&family=Instrument+Sans:wght@400;500;600&amp;family=Space+Grotesk:wght@500;600&amp;display=swap');
+        
+        :root {
+            --bg: #0a0a0a;
+            --surface: #111111;
+            --text: #f5f0e6;
+            --accent: #0f766e;
+            --teal: #14b8a6;
+            --warm: #b8a88a;
+        }
+        
+        body {
+            font-family: 'Instrument Sans', system_ui, sans-serif;
+        }
+        
+        .heading-serif {
+            font-family: 'Playfair Display', Georgia, serif;
+            font-weight: 700;
+            letter-spacing: -0.02em;
+        }
+
+        .heading-grotesk {
+            font-family: 'Space Grotesk', system_ui, sans-serif;
+            font-weight: 600;
+            letter-spacing: -0.03em;
+        }
+
+        .dark-bg {
+            background-color: #0a0a0a;
+        }
+
+        .surface {
+            background-color: #111111;
+        }
+
+        .accent {
+            color: #0f766e;
+        }
+
+        .gold {
+            color: #b8a88a;
+        }
+
+        .section-title {
+            font-size: 2.25rem;
+            line-height: 1.05;
+            letter-spacing: -0.04em;
+        }
+
+        .nav-link {
+            transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
+        }
+        
+        .nav-link:hover {
+            color: #14b8a6;
+            transform: translateY(-1px);
+        }
+
+        .product-card {
+            transition: transform 0.4s cubic-bezier(0.4, 0, 0.2, 1), 
+                        box-shadow 0.4s cubic-bezier(0.4, 0, 0.2, 1);
+        }
+        
+        .product-card:hover {
+            transform: translateY(-8px);
+            box-shadow: 0 20px 25px -5px rgb(0 0 0 / 0.1), 0 8px 10px -6px rgb(0 0 0 / 0.1);
+        }
+
+        .art-border {
+            border: 1px solid #2a2a2a;
+        }
+
+        .hero-text {
+            text-shadow: 0 2px 30px rgba(0, 0, 0, 0.6);
+        }
+
+        .subtle-grid {
+            background-image: 
+                linear-gradient(rgba(255,255,255,0.015) 1px, transparent 1px),
+                linear-gradient(90deg, rgba(255,255,255,0.015) 1px, transparent 1px);
+            background-size: 60px 60px;
+        }
+
+        .elegant-divider {
+            height: 1px;
+            background: linear-gradient(to right, transparent, #2a2a2a, transparent);
+        }
+
+        .modal {
+            animation: modalPop 0.2s cubic-bezier(0.32, 0.72, 0, 1);
+        }
+
+        @keyframes modalPop {
+            from {
+                opacity: 0;
+                transform: translateY(20px) scale(0.98);
+            }
+            to {
+                opacity: 1;
+                transform: translateY(0) scale(1);
+            }
+        }
+
+        .shop-item {
+            transition: all 0.3s cubic-bezier(0.4, 0.0, 0.2, 1);
+        }
+
+        .category-card {
+            transition: all 0.3s cubic-bezier(0.4, 0.0, 0.2, 1);
+        }
+        
+        .category-card:hover {
+            transform: translateY(-4px);
+            border-color: #14b8a6;
+        }
+
+        .nav-scrolled {
+            background-color: rgba(10, 10, 10, 0.95);
+            backdrop-filter: blur(12px);
+        }
+
+        .art-quote {
+            font-size: 1.35rem;
+            line-height: 1.35;
+        }
+
+        .hel-text {
+            font-size: 13px;
+            letter-spacing: 3px;
+            font-weight: 500;
+        }
+    </style>
+</head>
+<body class="dark-bg text-[#f5f0e6] overflow-x-hidden">
+    <!-- Navigation -->
+    <nav id="navbar" class="fixed top-0 left-0 right-0 z-50 border-b border-white/10 transition-all duration-300">
+        <div class="max-w-7xl mx-auto px-8">
+            <div class="flex items-center justify-between h-20">
+                <!-- Logo -->
+                <a href="#" class="flex items-center gap-x-3 group transition-opacity">
+                    <img src="images/logo.png" alt="Helaphant Logo" class="h-10 w-auto object-contain transition-transform duration-300 group-hover:scale-110">
+                    <div>
+                        <div class="heading-grotesk text-2xl font-semibold tracking-[-0.04em]">WAR HELAPHANT</div>
+                        <div class="hel-text text-[#0f766e] -mt-1">EST. IN THE SHADOWS</div>
+                    </div>
+                </a>
+
+                <!-- Desktop Menu -->
+                <div class="hidden md:flex items-center gap-x-10 text-sm font-medium">
+                    <a href="#shop" class="nav-link text-[#f5f0e6]/90 hover:text-[#f5f0e6]">Shop</a>
+                    <a href="#about" class="nav-link text-[#f5f0e6]/90 hover:text-[#f5f0e6]">The Story</a>
+                    <a href="#war-room" class="nav-link text-[#f5f0e6]/90 hover:text-[#f5f0e6]">War Room</a>
+                    <a href="#contact" class="nav-link text-[#f5f0e6]/90 hover:text-[#f5f0e6]">Contact</a>
+                </div>
+
+                <!-- Right side actions -->
+                <div class="flex items-center gap-x-4">
+                    <!-- Cart -->
+                    <button onclick="openCart()" 
+                            class="flex items-center gap-x-2 px-4 py-2 rounded-full hover:bg-white/5 transition-colors relative group">
+                        <i class="fa-solid fa-shopping-bag text-lg"></i>
+                        <span class="hidden sm:inline text-sm font-medium">Cart</span>
+                        <div id="cart-count" 
+                             class="absolute -top-1 -right-1 bg-[#0f766e] text-white text-[10px] font-mono w-5 h-5 rounded-full flex items-center justify-center">
+                            0
+                        </div>
+                    </button>
+
+                    <!-- Mobile menu button -->
+                    <button class="md:hidden p-2" onclick="toggleMobileMenu()">
+                        <i class="fa-solid fa-bars text-xl"></i>
+                    </button>
+                </div>
+            </div>
+        </div>
+    </nav>
+
+    <!-- Mobile Menu -->
+    <div id="mobile-menu" class="hidden md:hidden fixed inset-0 bg-[#0a0a0a] z-[60] pt-20">
+        <div class="px-8 py-8 flex flex-col gap-y-6 text-lg font-medium">
+            <a href="#shop" onclick="toggleMobileMenu()" class="py-2">Shop</a>
+            <a href="#about" onclick="toggleMobileMenu()" class="py-2">The Story</a>
+            <a href="#war-room" onclick="toggleMobileMenu()" class="py-2">War Room</a>
+            <a href="#contact" onclick="toggleMobileMenu()" class="py-2">Contact</a>
+            <div class="pt-6 border-t border-white/10">
+                <button onclick="toggleMobileMenu(); openCart();" 
+                        class="w-full py-4 bg-white/5 rounded-2xl flex items-center justify-center gap-x-3">
+                    <i class="fa-solid fa-shopping-bag"></i>
+                    <span>View Cart</span>
+                </button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Hero -->
+    <header class="pt-20 relative min-h-[100dvh] flex items-center border-b border-white/10">
+        <div class="absolute inset-0 subtle-grid"></div>
+        
+        <div class="max-w-5xl mx-auto px-8 relative z-10 pt-12 pb-20">
+            <div class="max-w-3xl">
+                <!-- Tag -->
+                <div class="inline-flex items-center gap-x-2 px-4 py-1.5 rounded-full border border-white/15 text-xs tracking-[2px] font-medium mb-8">
+                    <div class="w-1.5 h-1.5 rounded-full bg-[#0f766e]"></div>
+                    WHIMSICAL • MENACE
+                </div>
+
+                <div class="flex items-center gap-x-6 mb-4">
+                    <img src="images/logo.png" alt="Helaphant Logo" class="h-40 md:h-48 w-auto object-contain transition-transform duration-300 hover:scale-110">
+                    <h1 class="heading-serif text-[92px] md:text-[110px] leading-[0.88] tracking-[-6.2px]">
+                        WAR<br>HELAPHANT
+                    </h1>
+                </div>
+
+                <div class="text-[#14b8a6] text-sm tracking-[3px] font-medium mb-6">WAGING WAR THROUGH ART.</div>
+                
+                <p class="max-w-md text-2xl text-[#f5f0e6]/90 leading-tight tracking-tight mb-10">
+                    A lady savage.<br>
+                    Fierce. Protective. Unyielding.
+                </p>
+
+                <div class="flex flex-wrap gap-4">
+                    <button onclick="document.getElementById('shop').scrollIntoView({ behavior: 'smooth' })" 
+                            class="px-8 py-4 bg-white text-[#0a0a0a] font-semibold rounded-2xl hover:bg-[#14b8a6] hover:text-white transition-all active:scale-[0.985]">
+                        Enter the Shop
+                    </button>
+                    <button onclick="document.getElementById('about').scrollIntoView({ behavior: 'smooth' })" 
+                            class="px-8 py-4 border border-white/30 hover:bg-white/5 font-medium rounded-2xl transition-all">
+                        Read the Story
+                    </button>
+                </div>
+            </div>
+        </div>
+
+        <!-- Scroll indicator -->
+        <div class="absolute bottom-12 left-1/2 -translate-x-1/2 flex flex-col items-center gap-y-1 text-xs tracking-widest opacity-60">
+            <span>SCROLL TO BEGIN</span>
+            <i class="fa-solid fa-chevron-down"></i>
+        </div>
+    </header>
+
+    <!-- The Origin / Philosophy -->
+    <section id="about" class="max-w-5xl mx-auto px-8 py-24 border-b border-white/10">
+        <div class="grid md:grid-cols-12 gap-x-12 items-center">
+            <div class="md:col-span-7">
+                <div class="hel-text tracking-[4px] text-[#0f766e] mb-3">THE HELAPHANT</div>
+                <h2 class="heading-serif text-6xl md:text-7xl leading-none tracking-[-2.5px]">What the hell<br>is a Helaphant?</h2>
+            </div>
+            <div class="md:col-span-5 mt-8 md:mt-6 text-lg text-[#f5f0e6]/80 leading-relaxed">
+                A fusion of two ancient forces.<br><br>
+                <span class="text-[#14b8a6]">Hel</span> — the fierce Norse goddess who rules the underworld with a half-decayed face and an iron will.<br><br>
+                <span class="text-[#14b8a6]">The Elephant</span> — matriarch, protector, keeper of memory. The one who forms the circle when one of her own is vulnerable.
+            </div>
+        </div>
+
+        <div class="mt-16 max-w-3xl">
+            <p class="text-xl leading-tight text-[#f5f0e6]/90">
+                The Helaphant is the woman who holds both the savage and the sacred. 
+                She protects fiercely, loves deeply, and refuses to apologize for her power.
+            </p>
+            <div class="mt-6 text-sm text-[#f5f0e6]/60">— This is for the women who were told they were too much.</div>
+        </div>
+    </section>
+
+    <!-- Quote -->
+    <div class="max-w-4xl mx-auto px-8 py-20 text-center border-b border-white/10">
+        <div class="max-w-2xl mx-auto">
+            <i class="fa-solid fa-quote-left text-4xl text-[#0f766e] opacity-75 mb-6 block"></i>
+            <p class="art-quote leading-tight text-balance">
+                “The purpose of life, as far as I can tell... is to find a mode of being that's so meaningful 
+                that the fact that life is suffering is no longer relevant.”
+            </p>
+            <div class="mt-6 text-sm tracking-widest text-[#f5f0e6]/60">— JORDAN PETERSON</div>
+        </div>
+    </div>
+
+    <!-- Shop Categories -->
+    <section id="shop" class="max-w-7xl mx-auto px-8 py-20">
+        <div class="flex items-end justify-between mb-10">
+            <div>
+                <div class="hel-text tracking-[3px] text-[#0f766e]">CURATED FOR THE SAVAGE</div>
+                <h3 class="heading-serif text-6xl tracking-[-2px]">Shop</h3>
+            </div>
+            <a href="#" onclick="showAllProducts(); return false;" 
+               class="hidden md:flex items-center gap-x-2 text-sm hover:text-[#14b8a6] transition-colors">
+                VIEW FULL CATALOG <i class="fa-solid fa-arrow-right ml-1"></i>
+            </a>
+        </div>
+
+        <!-- Categories -->
+        <div class="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-6 gap-4">
+            <div onclick="filterByCategory('all')" class="category-card cursor-pointer border border-white/10 hover:border-[#14b8a6] surface rounded-3xl p-6 text-center">
+                <i class="fa-solid fa-th-large text-3xl mb-4 text-[#14b8a6]"></i>
+                <div class="font-semibold">All Work</div>
+            </div>
+            <div onclick="filterByCategory('prints')" class="category-card cursor-pointer border border-white/10 hover:border-[#14b8a6] surface rounded-3xl p-6 text-center">
+                <i class="fa-solid fa-image text-3xl mb-4 text-[#14b8a6]"></i>
+                <div class="font-semibold">Art Prints</div>
+                <div class="text-xs text-[#f5f0e6]/50 mt-0.5">14 pieces</div>
+            </div>
+            <div onclick="filterByCategory('wear')" class="category-card cursor-pointer border border-white/10 hover:border-[#14b8a6] surface rounded-3xl p-6 text-center">
+                <i class="fa-solid fa-tshirt text-3xl mb-4 text-[#14b8a6]"></i>
+                <div class="font-semibold">Wear It</div>
+                <div class="text-xs text-[#f5f0e6]/50 mt-0.5">Hand-painted</div>
+            </div>
+            <div onclick="filterByCategory('patches')" class="category-card cursor-pointer border border-white/10 hover:border-[#14b8a6] surface rounded-3xl p-6 text-center">
+                <i class="fa-solid fa-tag text-3xl mb-4 text-[#14b8a6]"></i>
+                <div class="font-semibold">Patches</div>
+                <div class="text-xs text-[#f5f0e6]/50 mt-0.5">Iron-on</div>
+            </div>
+            <div onclick="filterByCategory('slaps')" class="category-card cursor-pointer border border-white/10 hover:border-[#14b8a6] surface rounded-3xl p-6 text-center">
+                <i class="fa-solid fa-sticky-note text-3xl mb-4 text-[#14b8a6]"></i>
+                <div class="font-semibold">Slaps</div>
+                <div class="text-xs text-[#f5f0e6]/50 mt-0.5">Vinyl stickers</div>
+            </div>
+            <div onclick="filterByCategory('originals')" class="category-card cursor-pointer border border-white/10 hover:border-[#14b8a6] surface rounded-3xl p-6 text-center">
+                <i class="fa-solid fa-palette text-3xl mb-4 text-[#14b8a6]"></i>
+                <div class="font-semibold">Original Art</div>
+            </div>
+        </div>
+
+        <!-- Product Grid -->
+        <div id="product-grid" class="mt-12 grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6">
+            <!-- Populated by JavaScript -->
+        </div>
+
+        <div class="flex justify-center mt-10">
+            <button onclick="showAllProducts()" 
+                    class="px-6 py-3 border border-white/20 hover:bg-white/5 rounded-2xl text-sm flex items-center gap-x-2">
+                <span>Browse full collection</span>
+                <i class="fa-solid fa-arrow-right"></i>
+            </button>
+        </div>
+    </section>
+
+    <!-- War Room -->
+    <section id="war-room" class="border-t border-white/10 bg-[#111111]">
+        <div class="max-w-6xl mx-auto px-8 py-20">
+            <div class="flex flex-col lg:flex-row gap-16 items-center">
+                <div class="lg:w-5/12">
+                    <div class="hel-text tracking-[3px] text-[#0f766e]">COMMUNITY</div>
+                    <h3 class="heading-serif text-6xl tracking-[-2.5px] leading-none mt-2">The War Room</h3>
+                    <p class="mt-6 text-lg text-[#f5f0e6]/80">
+                        A space for collabs, hosted artists, and fellow savages. 
+                        Most links go to my frens' own sites. Some I host right here.
+                    </p>
+                    <button onclick="showWarRoomModal()" 
+                            class="mt-8 px-7 py-3.5 bg-white/5 hover:bg-white/10 border border-white/10 rounded-2xl text-sm font-medium transition-colors">
+                        Explore the War Room
+                    </button>
+                </div>
+
+                <div class="lg:w-7/12 grid grid-cols-2 gap-4 text-sm">
+                    <div class="surface border border-white/10 rounded-3xl p-6">
+                        <div class="font-medium">Valkyrie Collective</div>
+                        <div class="text-[#f5f0e6]/60 text-sm mt-1">Patch + apparel collabs</div>
+                    </div>
+                    <div class="surface border border-white/10 rounded-3xl p-6">
+                        <div class="font-medium">Bone &amp; Thorn</div>
+                        <div class="text-[#f5f0e6]/60 text-sm mt-1">Zine &amp; print exchange</div>
+                    </div>
+                    <div class="surface border border-white/10 rounded-3xl p-6">
+                        <div class="font-medium">The Unholy Choir</div>
+                        <div class="text-[#f5f0e6]/60 text-sm mt-1">Music &amp; visual ritual</div>
+                    </div>
+                    <div class="surface border border-white/10 rounded-3xl p-6">
+                        <div class="font-medium">Open Call</div>
+                        <div class="text-[#f5f0e6]/60 text-sm mt-1">DM for hosting or collab</div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </section>
+
+    <!-- Les be Frens -->
+    <section id="contact" class="max-w-3xl mx-auto px-8 py-20 text-center border-b border-white/10">
+        <div class="mx-auto max-w-md">
+            <div class="hel-text text-[#0f766e] tracking-[3.5px]">STAY IN THE CIRCLE</div>
+            <h3 class="heading-serif text-5xl mt-3 tracking-[-1.5px]">Les be Frens</h3>
+            <p class="mt-4 text-[#f5f0e6]/70">I won't spam you. Just the occasional email when something actually matters.</p>
+
+            <form name="newsletter" method="POST" data-netlify="true" class="mt-8">
+                <div class="flex">
+                    <input type="email" name="email" placeholder="your@email.com" required
+                           class="flex-1 bg-[#111] border border-white/15 focus:border-[#14b8a6] outline-none px-5 py-3.5 rounded-l-2xl text-sm placeholder:text-[#f5f0e6]/40">
+                    <button type="submit" 
+                            class="px-7 bg-[#0f766e] hover:bg-[#115e59] transition-colors rounded-r-2xl text-sm font-semibold">
+                        JOIN
+                    </button>
+                </div>
+            </form>
+            <div class="text-[11px] text-[#f5f0e6]/40 mt-3">No algorithms. No noise. Just the work.</div>
+        </div>
+    </section>
+
+    <!-- Footer -->
+    <footer class="max-w-7xl mx-auto px-8 py-12 text-xs text-[#f5f0e6]/50">
+        <div class="flex flex-col md:flex-row gap-y-4 items-center justify-between">
+            <div>© WAR HELAPHANT. All rights fiercely protected.</div>
+            <div class="flex gap-x-6">
+                <a href="#" class="hover:text-[#f5f0e6]">Instagram</a>
+                <a href="#" class="hover:text-[#f5f0e6]">TikTok</a>
+                <a href="#" class="hover:text-[#f5f0e6]">DM on Instagram</a>
+            </div>
+            <div>
+                <a href="admin.html" target="_blank" class="text-[#14b8a6]/70 hover:text-[#14b8a6] underline">Admin Panel</a>
+                <span class="mx-2 text-[#f5f0e6]/20">•</span>
+                <span class="text-[10px]">Handmade in the dark.</span>
+            </div>
+        </div>
+    </footer>
+
+    <!-- Product Modal -->
+    <div id="product-modal" onclick="if (event.target.id === 'product-modal') closeProductModal()" 
+         class="hidden fixed inset-0 bg-black/90 z-[70] flex items-center justify-center p-4">
+        <div onclick="event.stopImmediatePropagation()" 
+             class="modal surface border border-white/10 w-full max-w-4xl rounded-3xl overflow-hidden">
+            
+            <div class="grid md:grid-cols-5">
+                <!-- Image side -->
+                <div id="modal-image" class="md:col-span-3 bg-[#0a0a0a] h-80 md:h-full min-h-[320px] relative flex items-center justify-center">
+                    <!-- Populated dynamically -->
+                </div>
+
+                <!-- Details -->
+                <div class="md:col-span-2 p-8 md:pr-10">
+                    <div class="flex justify-between items-start">
+                        <div>
+                            <div id="modal-category" class="text-xs tracking-[2px] text-[#14b8a6]"></div>
+                            <h3 id="modal-title" class="heading-serif text-4xl tracking-[-1.5px] leading-none mt-1"></h3>
+                        </div>
+                        <button onclick="closeProductModal()" class="text-2xl text-[#f5f0e6]/40 hover:text-white">×</button>
+                    </div>
+
+                    <div id="modal-price" class="text-3xl mt-6 font-semibold"></div>
+
+                    <div id="modal-description" class="text-[#f5f0e6]/75 mt-6 text-[15px] leading-relaxed"></div>
+
+                    <!-- Variants -->
+                    <div id="modal-variants" class="mt-8"></div>
+
+                    <div class="mt-8 flex gap-3">
+                        <button onclick="addCurrentProductToCart()" 
+                                class="flex-1 py-4 rounded-2xl bg-[#0f766e] hover:bg-[#115e59] font-semibold text-sm tracking-wide transition-colors">
+                            ADD TO CART
+                        </button>
+                        <button onclick="closeProductModal()" 
+                                class="px-6 border border-white/20 hover:bg-white/5 rounded-2xl text-sm">
+                            CLOSE
+                        </button>
+                    </div>
+
+                    <div class="text-[10px] text-center text-[#f5f0e6]/40 mt-6">Each piece is made by hand. Slight variations are part of the magic.</div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Cart Drawer -->
+    <div id="cart-drawer" onclick="if (event.target.id === 'cart-drawer') closeCart()" 
+         class="hidden fixed inset-0 bg-black/80 z-[80]">
+        <div onclick="event.stopImmediatePropagation()" 
+             class="absolute right-0 top-0 bottom-0 w-full max-w-md surface border-l border-white/10 flex flex-col">
+            
+            <div class="px-8 py-6 border-b border-white/10 flex items-center justify-between">
+                <div class="text-xl font-semibold">Your Cart</div>
+                <button onclick="closeCart()" class="text-3xl leading-none text-[#f5f0e6]/50 hover:text-white">×</button>
+            </div>
+
+            <div id="cart-items" class="flex-1 overflow-y-auto p-8 space-y-6 text-sm">
+                <!-- Populated by JS -->
+            </div>
+
+            <form name="order" method="POST" data-netlify="true" class="p-8 border-t border-white/10" onsubmit="handleOrderSubmit(event)">
+                <div class="space-y-3 mb-6">
+                    <input type="text" name="name" placeholder="Your name" required 
+                           class="w-full bg-[#0a0a0a] border border-white/15 rounded-2xl px-4 py-2 text-sm placeholder:text-[#f5f0e6]/40">
+                    <input type="email" name="email" placeholder="Your email" required 
+                           class="w-full bg-[#0a0a0a] border border-white/15 rounded-2xl px-4 py-2 text-sm placeholder:text-[#f5f0e6]/40">
+                    <textarea name="notes" placeholder="Special requests or notes" rows="2"
+                              class="w-full bg-[#0a0a0a] border border-white/15 rounded-2xl px-4 py-2 text-sm placeholder:text-[#f5f0e6]/40 resize-y"></textarea>
+                </div>
+
+                <div class="flex justify-between text-lg font-medium mb-4">
+                    <span>Total</span>
+                    <span id="cart-total">$0</span>
+                </div>
+
+                <!-- Hidden cart summary populated by JS -->
+                <input type="hidden" name="cart" id="cart-summary">
+
+                <button type="submit" 
+                        class="w-full py-4 bg-[#14b8a6] hover:bg-[#d4b17f] text-[#0a0a0a] font-semibold rounded-2xl transition-all mb-3">
+                    CHECKOUT — COLLECT ORDER (EMAIL)
+                </button>
+
+                <button type="button" onclick="initiateStripeCheckout()"
+                        class="w-full py-4 border border-[#14b8a6] hover:bg-[#14b8a6]/10 text-[#14b8a6] font-semibold rounded-2xl transition-all">
+                    PAY WITH CARD (STRIPE)
+                </button>
+                
+                <div class="text-center text-[10px] text-[#f5f0e6]/40 mt-4">Form submits via Netlify (emails you). Stripe option for direct payments (configure key above).</div>
+            </form>
+        </div>
+    </div>
+
+    <script>
+        // ============================================
+        // SUPABASE CONFIGURATION
+        // ============================================
+        const SUPABASE_URL = 'https://hxisuvcyfmsotiavhiav.supabase.co';
+        const SUPABASE_KEY = 'sb_publishable_B8Dn3MXwiA8W5N-SnNBw_A_F9Xoi3PN';
+        
+        // Stripe: Replace with your Stripe publishable key (pk_test_...) from https://dashboard.stripe.com/test/apikeys
+        // For real payments, create products in Stripe or use dynamic line items via backend.
+        // Current implementation: Placeholder that logs and suggests setup.
+        const STRIPE_PUBLISHABLE_KEY = 'pk_test_YOUR_STRIPE_PUBLISHABLE_KEY_HERE';
+        
+        let supabaseClient = null;
+
+        function getSupabaseClient() {
+            if (!supabaseClient && window.supabase) {
+                try {
+                    supabaseClient = window.supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
+                } catch (e) {
+                    console.warn('Supabase client failed to initialize:', e);
+                }
+            }
+            return supabaseClient;
+        }
+
+        // ============================================
+        // Tailwind config
+        function initializeTailwind() {
+            document.documentElement.style.setProperty('--accent', '#0f766e');
+        }
+
+        // Navbar scroll effect
+        function initNavbar() {
+            const navbar = document.getElementById('navbar');
+            
+            window.addEventListener('scroll', () => {
+                if (window.scrollY > 30) {
+                    navbar.classList.add('nav-scrolled', 'border-white/10');
+                } else {
+                    navbar.classList.remove('nav-scrolled');
+                }
+            });
+        }
+
+        // Default products (fallback)
+        const defaultProducts = [
+            {
+                id: 1,
+                title: "BE NOT AFRAID",
+                category: "wear",
+                price: 100,
+                image: "https://helaphant.com/cdn/shop/files/Screenshot_20260416-223037_1024x1024@2x.png?v=1776610328",
+                description: "Hand-painted bleach art on premium USA-made cotton. Dark angel motif on the back with raw 'BE NOT AFRAID' lettering across the chest. Every shirt is completely unique.",
+                variants: ["S", "M", "L", "XL"],
+                badge: "Pre-order"
+            },
+            {
+                id: 2,
+                title: "Blood Moon",
+                category: "prints",
+                price: 15,
+                image: "https://picsum.photos/id/1015/800/800",
+                description: "Limited edition archival print. Rich crimson and deep blacks. 11x14\" on heavyweight matte cotton rag paper.",
+                variants: ["Standard", "Signed"],
+                badge: "Limited"
+            },
+            {
+                id: 3,
+                title: "Seal of the Valkyrie",
+                category: "patches",
+                price: 13,
+                image: "https://helaphant.com/cdn/shop/files/rn-image_picker_lib_temp_3aff2d94-36a7-4d00-af1b-526b3f2a2840_1024x1024.jpg?v=1768260461",
+                description: "Iron-on embroidered patch. Heavy duty. For battle jackets, bags, and armor.",
+                variants: ["Single", "Pair"],
+                badge: null
+            },
+            {
+                id: 4,
+                title: "Mouth of a Wolf, Eyes of a Lamb",
+                category: "prints",
+                price: 15,
+                image: "https://picsum.photos/id/1005/800/800",
+                description: "The duality we all carry. High quality giclée print on textured fine art paper.",
+                variants: ["Standard"],
+                badge: null
+            },
+            {
+                id: 5,
+                title: "Dark Fae",
+                category: "prints",
+                price: 15,
+                image: "https://picsum.photos/id/1016/800/800",
+                description: "Mysterious and commanding. One of the most requested prints in the collection.",
+                variants: ["Standard", "Signed + Numbered"],
+                badge: "Best seller"
+            },
+            {
+                id: 6,
+                title: "Patron Saint of the Goobs",
+                category: "prints",
+                price: 15,
+                image: "https://picsum.photos/id/1033/800/800",
+                description: "For the weirdos, the outsiders, and the ones who never fit in. We see you.",
+                variants: ["Standard"],
+                badge: null
+            },
+            {
+                id: 7,
+                title: "Gandalf",
+                category: "prints",
+                price: 15,
+                image: "https://picsum.photos/id/160/800/800",
+                description: "You shall not pass... without this print. A darker take on the classic wizard.",
+                variants: ["Standard"],
+                badge: null
+            },
+            {
+                id: 8,
+                title: "Hand-Painted Bleach Hoodie",
+                category: "wear",
+                price: 145,
+                image: "https://picsum.photos/id/201/800/800",
+                description: "Heavyweight fleece with custom hand-bleached artwork. Extremely limited.",
+                variants: ["M", "L", "XL"],
+                badge: "Limited"
+            }
+        ];
+
+        // ============================================
+        // PRODUCT LOADING (Supabase primary)
+        // ============================================
+        async function loadProductsFromSupabase() {
+            const client = getSupabaseClient();
+            if (!client) return null;
+
+            try {
+                const { data, error } = await client
+                    .from('products')
+                    .select('*')
+                    .order('id', { ascending: true });
+
+                if (error) {
+                    console.warn('Supabase load error:', error);
+                    return null;
+                }
+
+                if (data && data.length > 0) {
+                    console.log('%c[Helaphant] Loaded products from Supabase', 'color:#14b8a6');
+                    return data;
+                }
+            } catch (e) {
+                console.warn('Failed to fetch from Supabase:', e);
+            }
+            return null;
+        }
+
+        async function loadProducts() {
+            // Primary: Load from Supabase
+            const supabaseProducts = await loadProductsFromSupabase();
+            if (supabaseProducts && supabaseProducts.length > 0) {
+                return supabaseProducts;
+            }
+
+            // Last resort fallback (only if Supabase completely fails)
+            console.warn('%c[Helaphant] Supabase unavailable — using default products', 'color:#f59e0b');
+            return [...defaultProducts];
+        }
+
+        let products = []; // Will be populated in initializeEverything
+
+        let cart = [];
+        let currentProduct = null;
+        let currentFilter = 'all';
+
+        function renderProducts(filteredProducts) {
+            const grid = document.getElementById('product-grid');
+            grid.innerHTML = '';
+
+            filteredProducts.forEach(product => {
+                const card = document.createElement('div');
+                card.className = `product-card surface border border-white/10 rounded-3xl overflow-hidden group cursor-pointer`;
+                
+                card.innerHTML = `
+                    <div class="relative h-72 bg-[#0a0a0a] flex items-center justify-center overflow-hidden">
+                        <img src="${product.image}" alt="${product.title}" 
+                             class="max-h-[260px] object-contain group-hover:scale-105 transition-transform duration-700"
+                             onerror="this.src='https://picsum.photos/id/1015/600/600'">
+                        
+                        ${product.badge ? `
+                            <div class="absolute top-4 right-4 px-3 py-1 text-[10px] tracking-widest bg-[#0a0a0a]/90 border border-white/10 rounded-full">
+                                ${product.badge}
+                            </div>
+                        ` : ''}
+                    </div>
+                    
+                    <div class="p-5">
+                        <div class="flex justify-between items-baseline">
+                            <div>
+                                <div class="font-semibold text-lg leading-tight">${product.title}</div>
+                                <div class="text-xs uppercase tracking-widest text-[#14b8a6] mt-0.5">${product.category.toUpperCase()}</div>
+                            </div>
+                            <div class="text-right">
+                                <div class="font-mono text-xl font-medium">$${product.price}</div>
+                            </div>
+                        </div>
+                        
+                        <div class="mt-5 flex gap-3">
+                            <button onclick="event.stopImmediatePropagation(); quickAddToCart(${product.id});" 
+                                    class="flex-1 text-sm py-2.5 border border-white/15 hover:bg-white/5 rounded-2xl transition-colors">
+                                Quick Add
+                            </button>
+                            <button onclick="event.stopImmediatePropagation(); showProductModal(${product.id});" 
+                                    class="flex-1 text-sm py-2.5 bg-white/5 hover:bg-white/10 rounded-2xl transition-colors">
+                                View Details
+                            </button>
+                        </div>
+                    </div>
+                `;
+                
+                card.onclick = () => showProductModal(product.id);
+                grid.appendChild(card);
+            });
+        }
+
+        function filterByCategory(category) {
+            currentFilter = category;
+            
+            const filtered = category === 'all' 
+                ? products 
+                : products.filter(p => p.category === category);
+            
+            renderProducts(filtered);
+            
+            // Scroll to shop
+            document.getElementById('shop').scrollIntoView({ behavior: 'smooth', block: 'start' });
+        }
+
+        function showAllProducts() {
+            currentFilter = 'all';
+            renderProducts(products);
+            document.getElementById('shop').scrollIntoView({ behavior: 'smooth' });
+        }
+
+        function showProductModal(productId) {
+            const product = products.find(p => p.id === productId);
+            if (!product) return;
+
+            currentProduct = product;
+
+            // Populate modal
+            document.getElementById('modal-title').textContent = product.title;
+            document.getElementById('modal-price').textContent = `$${product.price}`;
+            document.getElementById('modal-category').textContent = product.category.toUpperCase();
+            document.getElementById('modal-description').textContent = product.description;
+
+            // Image
+            const imageContainer = document.getElementById('modal-image');
+            imageContainer.innerHTML = `
+                <img src="${product.image}" alt="${product.title}" class="max-h-full max-w-full object-contain p-8"
+                     onerror="this.src='https://picsum.photos/id/1015/600/600'">
+            `;
+
+            // Variants
+            const variantsContainer = document.getElementById('modal-variants');
+            variantsContainer.innerHTML = `
+                <div class="text-xs tracking-[2px] text-[#14b8a6] mb-3">SELECT ${product.variants.length > 1 ? 'OPTION' : 'SIZE'}</div>
+                <div class="flex flex-wrap gap-2" id="variant-buttons">
+                    ${product.variants.map((v, i) => `
+                        <button onclick="selectVariant(this, '${v}')" 
+                                class="variant-btn px-5 py-2 text-sm border ${i === 0 ? 'border-[#14b8a6] bg-white/5' : 'border-white/15'} hover:border-[#14b8a6] rounded-2xl transition-colors">
+                            ${v}
+                        </button>
+                    `).join('')}
+                </div>
+            `;
+
+            document.getElementById('product-modal').classList.remove('hidden');
+            document.getElementById('product-modal').classList.add('flex');
+        }
+
+        function selectVariant(element, value) {
+            // Deselect all
+            document.querySelectorAll('#variant-buttons .variant-btn').forEach(btn => {
+                btn.classList.remove('border-[#14b8a6]', 'bg-white/5');
+                btn.classList.add('border-white/15');
+            });
+            
+            // Select clicked
+            element.classList.add('border-[#14b8a6]', 'bg-white/5');
+            element.classList.remove('border-white/15');
+            
+            // Store selection
+            currentProduct.selectedVariant = value;
+        }
+
+        function closeProductModal() {
+            const modal = document.getElementById('product-modal');
+            modal.classList.remove('flex');
+            modal.classList.add('hidden');
+            currentProduct = null;
+        }
+
+        function quickAddToCart(productId) {
+            const product = products.find(p => p.id === productId);
+            if (!product) return;
+
+            addToCart(product, product.variants[0] || 'One Size');
+        }
+
+        function addCurrentProductToCart() {
+            if (!currentProduct) return;
+
+            const variant = currentProduct.selectedVariant || currentProduct.variants[0] || 'One Size';
+            addToCart(currentProduct, variant);
+            closeProductModal();
+        }
+
+        function addToCart(product, variant) {
+            const existing = cart.findIndex(item => item.id === product.id && item.variant === variant);
+            
+            if (existing !== -1) {
+                cart[existing].quantity++;
+            } else {
+                cart.push({
+                    ...product,
+                    variant: variant,
+                    quantity: 1
+                });
+            }
+
+            updateCartCount();
+            
+            // Nice feedback
+            const toast = document.createElement('div');
+            toast.className = `fixed bottom-8 left-1/2 -translate-x-1/2 bg-[#111] border border-white/10 px-5 py-3 rounded-2xl text-sm flex items-center gap-x-3 shadow-2xl z-[90]`;
+            toast.innerHTML = `
+                <span>Added <strong>${product.title}</strong></span>
+                <button onclick="openCart(); this.parentElement.remove()" class="underline text-[#14b8a6]">View cart</button>
+            `;
+            document.body.appendChild(toast);
+            
+            setTimeout(() => {
+                if (toast.parentElement) toast.parentElement.removeChild(toast);
+            }, 3200);
+        }
+
+        function updateCartCount() {
+            const countEl = document.getElementById('cart-count');
+            const totalItems = cart.reduce((sum, item) => sum + item.quantity, 0);
+            countEl.textContent = totalItems;
+            
+            if (totalItems === 0) {
+                countEl.classList.add('hidden');
+            } else {
+                countEl.classList.remove('hidden');
+            }
+        }
+
+        function openCart() {
+            const drawer = document.getElementById('cart-drawer');
+            const itemsContainer = document.getElementById('cart-items');
+
+            drawer.classList.remove('hidden');
+            drawer.classList.add('flex');
+
+            renderCartItems();
+        }
+
+        function closeCart() {
+            const drawer = document.getElementById('cart-drawer');
+            drawer.classList.remove('flex');
+            drawer.classList.add('hidden');
+        }
+
+        function renderCartItems() {
+            const container = document.getElementById('cart-items');
+            const totalEl = document.getElementById('cart-total');
+
+            if (cart.length === 0) {
+                container.innerHTML = `
+                    <div class="h-full flex flex-col items-center justify-center text-center opacity-60">
+                        <i class="fa-solid fa-shopping-bag text-4xl mb-4"></i>
+                        <div>Your cart is empty</div>
+                        <button onclick="closeCart()" class="mt-4 text-xs underline">Continue shopping</button>
+                    </div>
+                `;
+                totalEl.textContent = '$0';
+                return;
+            }
+
+            let html = '';
+            let total = 0;
+
+            cart.forEach((item, index) => {
+                const itemTotal = item.price * item.quantity;
+                total += itemTotal;
+
+                html += `
+                    <div class="flex gap-4">
+                        <div class="w-20 h-20 bg-[#0a0a0a] rounded-2xl overflow-hidden flex-shrink-0 border border-white/10">
+                            <img src="${item.image}" class="w-full h-full object-cover" onerror="this.src='https://picsum.photos/id/1015/600/600'">
+                        </div>
+                        <div class="flex-1 min-w-0">
+                            <div class="font-medium leading-tight">${item.title}</div>
+                            <div class="text-xs text-[#14b8a6] mt-px">${item.variant}</div>
+                            
+                            <div class="flex items-center justify-between mt-3">
+                                <div class="font-mono text-sm">$${item.price} × ${item.quantity}</div>
+                                
+                                <div class="flex items-center gap-x-2 text-sm">
+                                    <button onclick="changeCartQuantity(${index}, -1)" class="w-7 h-7 border border-white/15 hover:bg-white/5 rounded-xl">-</button>
+                                    <div class="font-mono w-5 text-center">${item.quantity}</div>
+                                    <button onclick="changeCartQuantity(${index}, 1)" class="w-7 h-7 border border-white/15 hover:bg-white/5 rounded-xl">+</button>
+                                    
+                                    <button onclick="removeFromCart(${index})" class="ml-3 text-[#0f766e] hover:text-red-500">
+                                        <i class="fa-solid fa-trash text-xs"></i>
+                                    </button>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                `;
+            });
+
+            container.innerHTML = html;
+            totalEl.textContent = `$${total}`;
+
+            // Update hidden form field for Netlify
+            const summaryField = document.getElementById('cart-summary');
+            if (summaryField) {
+                const summary = cart.map(item => `${item.title} (${item.variant}) x${item.quantity} — $${item.price * item.quantity}`).join('\n');
+                summaryField.value = summary + `\n\nTotal: $${total}`;
+            }
+        }
+
+        function changeCartQuantity(index, delta) {
+            cart[index].quantity += delta;
+            
+            if (cart[index].quantity <= 0) {
+                cart.splice(index, 1);
+            }
+            
+            updateCartCount();
+            renderCartItems();
+        }
+
+        function removeFromCart(index) {
+            cart.splice(index, 1);
+            updateCartCount();
+            renderCartItems();
+        }
+
+        async function handleOrderSubmit(e) {
+            e.preventDefault();
+
+            const form = e.target;
+            const total = cart.reduce((sum, item) => sum + item.price * item.quantity, 0);
+            const formData = new FormData(form);
+
+            // 1. Submit to Netlify Forms (on deploy this emails you automatically)
+            // The form submit will be handled by Netlify when deployed.
+            // For local, we just log.
+
+            console.log('Order form data:', Object.fromEntries(formData));
+
+            // 2. Also save to Supabase 'orders' table for admin visibility (create the table in Supabase if not exists)
+            const client = getSupabaseClient();
+            if (client) {
+                try {
+                    const orderData = {
+                        name: formData.get('name'),
+                        email: formData.get('email'),
+                        notes: formData.get('notes') || '',
+                        cart_summary: formData.get('cart'),
+                        total: total,
+                        status: 'new'
+                    };
+                    const { error } = await client.from('orders').insert([orderData]);
+                    if (error) {
+                        console.warn('Could not save order to Supabase (create "orders" table if needed):', error);
+                    } else {
+                        console.log('Order also saved to Supabase.');
+                    }
+                } catch (err) {
+                    console.warn('Supabase order save failed:', err);
+                }
+            }
+
+            // Clear UI
+            cart = [];
+            updateCartCount();
+            closeCart();
+
+            // Success message (Netlify will show its own thank you on live deploy)
+            setTimeout(() => {
+                alert(`Thank you! Your order has been submitted.\n\nTotal: $${total}\n\n- On the live Netlify site: This form will email you automatically (check Netlify Forms tab).\n- Order is also recorded in Supabase (if 'orders' table exists).\n- Follow up with customer for payment or fulfillment.`);
+                form.reset();
+            }, 300);
+        }
+
+        function initiateStripeCheckout() {
+            const total = cart.reduce((sum, item) => sum + item.price * item.quantity, 0);
+            if (total <= 0 || cart.length === 0) {
+                alert("Cart is empty.");
+                return;
+            }
+
+            if (STRIPE_PUBLISHABLE_KEY.includes('YOUR_STRIPE')) {
+                // Placeholder until user adds real key
+                alert(`Stripe not configured yet.\n\nTo enable real card payments:\n1. Sign up at https://stripe.com (free).\n2. Get your publishable key (pk_test_...).\n3. Paste it into the STRIPE_PUBLISHABLE_KEY in this file.\n4. In Stripe dashboard, create a Payment Link or products for your items.\n\nFor now, use the form above to collect the order (it will email you on deploy).\n\nTotal would be $${total}.`);
+                return;
+            }
+
+            // Real implementation would:
+            // - Call a serverless function (Netlify Function) or Supabase Edge Function to create a Stripe Checkout session with line items from cart.
+            // - Then: const stripe = Stripe(STRIPE_PUBLISHABLE_KEY); stripe.redirectToCheckout({ sessionId });
+            // Simple demo: redirect to a generic Stripe demo or your payment link.
+            // For full dynamic, see Stripe docs: "Create a Checkout Session".
+
+            const stripe = Stripe(STRIPE_PUBLISHABLE_KEY);
+            // Placeholder redirect (replace with real session creation)
+            alert(`(Demo) Would redirect to Stripe Checkout for $${total}.\n\nIn production, this would create a secure hosted checkout page with your cart items.`);
+            // Example real flow (uncomment and implement server side):
+            // window.location.href = 'https://your-stripe-payment-link-or-session-url';
+        }
+
+        // Newsletter handled by Netlify Forms on deploy.
+        // This provides nice local feedback only.
+        function subscribeNewsletter(e) {
+            // If the form has data-netlify, let it submit normally on deploy.
+            // For local/dev we intercept for UX.
+            if (!window.location.hostname.includes('localhost') && !window.location.hostname.includes('127.0.0.1')) {
+                return; // let Netlify handle it
+            }
+
+            e.preventDefault();
+            const form = e.target;
+            const emailInput = form.querySelector('input[type="email"]');
+            const email = emailInput ? emailInput.value.trim() : '';
+
+            if (!email) {
+                alert("Please enter your email.");
+                return;
+            }
+
+            const btn = form.querySelector('button');
+            const originalText = btn.innerHTML;
+            btn.innerHTML = 'THANKS, FREN';
+            btn.disabled = true;
+
+            setTimeout(() => {
+                alert(`Thank you. ${email} has been added to the circle. (On the live site this will be processed automatically.)`);
+                emailInput.value = '';
+                btn.innerHTML = originalText;
+                btn.disabled = false;
+            }, 850);
+        }
+
+        function showWarRoomModal() {
+            const modal = document.createElement('div');
+            modal.className = `fixed inset-0 bg-black/90 z-[70] flex items-center justify-center p-4`;
+            modal.innerHTML = `
+                <div onclick="event.target.remove()" class="absolute inset-0"></div>
+                <div onclick="event.stopImmediatePropagation()" class="modal relative surface border border-white/10 max-w-lg w-full rounded-3xl p-8">
+                    <div class="flex justify-between">
+                        <div>
+                            <div class="hel-text text-[#0f766e]">WAR ROOM</div>
+                            <div class="text-4xl font-semibold tracking-tight mt-1">Friends &amp; Collabs</div>
+                        </div>
+                        <button onclick="this.closest('.fixed').remove()" class="text-3xl text-white/40">×</button>
+                    </div>
+                    
+                    <div class="mt-8 space-y-5 text-sm">
+                        <div class="border-l-2 border-[#0f766e] pl-5">
+                            <div class="font-medium">Valkyrie Collective</div>
+                            <div class="text-[#f5f0e6]/60">Patch series and ritual wear. Currently open for submissions.</div>
+                        </div>
+                        <div class="border-l-2 border-[#0f766e] pl-5">
+                            <div class="font-medium">Bone &amp; Thorn Zines</div>
+                            <div class="text-[#f5f0e6]/60">Quarterly artist zine exchange. Issue 04 accepting work.</div>
+                        </div>
+                        <div class="border-l-2 border-[#0f766e] pl-5">
+                            <div class="font-medium">Open Hosting</div>
+                            <div class="text-[#f5f0e6]/60">Want me to carry your work or collaborate on a drop? Reach out.</div>
+                        </div>
+                    </div>
+                    
+                    <a href="https://instagram.com" target="_blank" 
+                       class="mt-8 block w-full text-center py-3 border border-white/15 hover:bg-white/5 rounded-2xl text-sm">
+                        DM ME ON INSTAGRAM
+                    </a>
+                </div>
+            `;
+            document.body.appendChild(modal);
+        }
+
+        async function initProducts() {
+            const grid = document.getElementById('product-grid');
+            
+            // Show loading state
+            grid.innerHTML = `
+                <div class="col-span-full flex flex-col items-center justify-center py-16 text-[#f5f0e6]/60">
+                    <div class="w-8 h-8 border-2 border-[#14b8a6] border-t-transparent rounded-full animate-spin mb-4"></div>
+                    <div>Loading collection...</div>
+                </div>
+            `;
+
+            // Load products (Supabase primary)
+            products = await loadProducts();
+
+            // Render products
+            renderProducts(products);
+            
+            console.log('%c[Helaphant] Product catalog initialized with ' + products.length + ' items', 'color:#555');
+        }
+
+        function initMobileMenu() {
+            // Already handled by toggle function
+        }
+
+        function toggleMobileMenu() {
+            const menu = document.getElementById('mobile-menu');
+            menu.classList.toggle('hidden');
+            menu.classList.toggle('flex');
+        }
+
+        async function initializeEverything() {
+            initializeTailwind();
+            initNavbar();
+            await initProducts();           // Now properly waits for Supabase or fallback
+            initMobileMenu();
+            updateCartCount();
+
+            // Easter egg: Konami-ish hint in console
+            console.log('%c[Helaphant] New site ready. Type "filterByCategory(\'prints\')" in console to test filtering.', 'color:#444');
+        }
+
+        // Boot the site
+        window.onload = initializeEverything;
+        
+        // Keyboard support
+        document.addEventListener('keydown', function(e) {
+            if (e.key === "Escape") {
+                const modals = document.querySelectorAll('.fixed');
+                if (modals.length > 0) {
+                    modals[modals.length-1].remove();
+                } else {
+                    const cartDrawer = document.getElementById('cart-drawer');
+                    if (!cartDrawer.classList.contains('hidden')) closeCart();
+                    else {
+                        const prodModal = document.getElementById('product-modal');
+                        if (!prodModal.classList.contains('hidden')) closeProductModal();
+                    }
+                }
+            }
+        });
+    </script>
+</body>
+</html>

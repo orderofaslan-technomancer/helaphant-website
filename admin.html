@@ -1,0 +1,876 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Admin • War Helaphant</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css">
+    <style>
+        @import url('https://fonts.googleapis.com/css2?family=Playfair+Display:wght@700&family=Instrument+Sans:wght@400;500;600&amp;family=Space+Grotesk:wght@500;600&amp;display=swap');
+        
+        body {
+            font-family: 'Instrument Sans', system_ui, sans-serif;
+        }
+        
+        .heading-serif {
+            font-family: 'Playfair Display', Georgia, serif;
+            font-weight: 700;
+            letter-spacing: -0.02em;
+        }
+
+        .surface {
+            background-color: #111111;
+        }
+
+        .admin-input {
+            background-color: #0a0a0a;
+            border: 1px solid #2a2a2a;
+        }
+
+        .admin-input:focus {
+            border-color: #0f766e;
+            outline: none;
+            box-shadow: 0 0 0 3px rgba(15, 118, 110, 0.1);
+        }
+
+        .product-row {
+            transition: background-color 0.2s ease;
+        }
+        
+        .product-row:hover {
+            background-color: #1a1a1a;
+        }
+
+        .teal {
+            color: #14b8a6;
+        }
+    </style>
+</head>
+<body class="bg-[#0a0a0a] text-[#f5f0e6]">
+    <!-- Top Bar -->
+    <div class="border-b border-white/10">
+        <div class="max-w-7xl mx-auto px-8 h-16 flex items-center justify-between">
+            <div class="flex items-center gap-x-4">
+                <img src="images/logo.png" alt="Helaphant Logo" class="h-8 w-auto object-contain transition-transform duration-300 hover:scale-110">
+                <div>
+                    <span class="font-semibold text-xl">WAR HELAPHANT</span>
+                    <span class="text-xs ml-3 px-2 py-0.5 rounded bg-[#0f766e]/20 text-[#14b8a6]">ADMIN</span>
+                </div>
+            </div>
+
+            <div class="flex items-center gap-x-4 text-sm">
+                <a href="index.html" target="_blank" 
+                   class="flex items-center gap-x-2 px-4 py-2 rounded-xl border border-white/10 hover:bg-white/5 transition-colors">
+                    <i class="fa-solid fa-external-link-alt"></i>
+                    <span>View Live Site</span>
+                </a>
+                <button onclick="logout()" 
+                        class="flex items-center gap-x-2 px-4 py-2 rounded-xl hover:bg-white/5 text-[#f5f0e6]/70">
+                    <i class="fa-solid fa-sign-out-alt"></i>
+                    <span>Exit Admin</span>
+                </button>
+            </div>
+        </div>
+    </div>
+
+    <div id="admin-content" class="max-w-7xl mx-auto px-8 py-10" style="display: none;">
+        <!-- Header -->
+        <div class="flex items-end justify-between mb-8">
+            <div>
+                <div class="text-xs tracking-[3px] text-[#0f766e]">CONTENT MANAGEMENT</div>
+                <h1 class="heading-serif text-5xl tracking-[-1.5px]">Product Editor</h1>
+            </div>
+            <div class="flex gap-3">
+                <button onclick="resetToDefaults()" 
+                        class="px-5 py-2.5 text-sm border border-white/15 hover:bg-white/5 rounded-2xl flex items-center gap-x-2">
+                    <i class="fa-solid fa-undo"></i>
+                    <span>Reset to Defaults</span>
+                </button>
+                <button onclick="showAddModal()" 
+                        class="px-6 py-2.5 bg-[#0f766e] hover:bg-[#115e59] text-white rounded-2xl text-sm font-semibold flex items-center gap-x-2">
+                    <i class="fa-solid fa-plus"></i>
+                    <span>Add New Product</span>
+                </button>
+            </div>
+        </div>
+
+        <!-- Supabase Status -->
+        <div class="mb-6 flex items-center gap-x-3">
+            <div id="supabase-status" 
+                 class="inline-flex items-center gap-x-2 px-3 py-1.5 rounded-full bg-white/5 border border-white/10 text-xs">
+                <div class="w-2 h-2 rounded-full bg-yellow-500 animate-pulse"></div>
+                <span>Connecting to Supabase...</span>
+            </div>
+            <button onclick="reloadFromSupabase()" 
+                    class="text-xs px-3 py-1.5 border border-white/15 rounded-full hover:bg-white/5 flex items-center gap-x-1">
+                <i class="fa-solid fa-sync text-xs"></i>
+                <span>Reload from DB</span>
+            </button>
+        </div>
+
+        <!-- Stats -->
+        <div class="grid grid-cols-2 md:grid-cols-4 gap-4 mb-8">
+            <div class="surface border border-white/10 rounded-3xl p-5">
+                <div class="text-xs text-[#f5f0e6]/50">TOTAL PRODUCTS</div>
+                <div id="stat-total" class="text-4xl font-semibold mt-1">0</div>
+            </div>
+            <div class="surface border border-white/10 rounded-3xl p-5">
+                <div class="text-xs text-[#f5f0e6]/50">CATEGORIES</div>
+                <div id="stat-categories" class="text-4xl font-semibold mt-1">0</div>
+            </div>
+            <div class="surface border border-white/10 rounded-3xl p-5">
+                <div class="text-xs text-[#f5f0e6]/50">HIGHEST PRICE</div>
+                <div id="stat-high" class="text-4xl font-semibold mt-1">$0</div>
+            </div>
+            <div class="surface border border-white/10 rounded-3xl p-5">
+                <div class="text-xs text-[#f5f0e6]/50">LAST SAVED</div>
+                <div id="stat-saved" class="text-sm mt-2 text-[#f5f0e6]/60">Never</div>
+            </div>
+        </div>
+
+        <!-- Products Table -->
+        <div class="surface border border-white/10 rounded-3xl overflow-hidden">
+            <div class="px-6 py-4 border-b border-white/10 flex items-center justify-between bg-[#0f1111]">
+                <div class="font-medium">All Products</div>
+                <div class="text-xs text-[#f5f0e6]/50">Changes are saved to this browser only</div>
+            </div>
+
+            <div class="overflow-x-auto">
+                <table class="w-full text-sm">
+                    <thead>
+                        <tr class="border-b border-white/10 text-left text-xs text-[#f5f0e6]/50">
+                            <th class="px-6 py-4 font-normal w-20">ID</th>
+                            <th class="px-6 py-4 font-normal">Product</th>
+                            <th class="px-6 py-4 font-normal w-28">Category</th>
+                            <th class="px-6 py-4 font-normal w-24 text-right">Price</th>
+                            <th class="px-6 py-4 font-normal w-32">Image</th>
+                            <th class="px-6 py-4 font-normal w-40">Actions</th>
+                        </tr>
+                    </thead>
+                    <tbody id="products-table-body" class="divide-y divide-white/10">
+                        <!-- Populated by JS -->
+                    </tbody>
+                </table>
+            </div>
+        </div>
+
+        <div class="mt-6 text-xs text-[#f5f0e6]/40 max-w-2xl">
+            <strong>How this works:</strong> This admin panel saves everything in your browser's localStorage. 
+            When you open <code class="text-[#14b8a6]">index.html</code>, it automatically loads the latest products you saved here. 
+            This is perfect for testing and local editing. For a real public website, we can later connect this to a proper database (Supabase, etc.).
+        </div>
+    </div>
+
+    <!-- Add / Edit Modal -->
+    <div id="product-modal" onclick="if (event.target.id === 'product-modal') closeModal()" 
+         class="hidden fixed inset-0 bg-black/90 z-50 flex items-center justify-center p-6">
+        <div onclick="event.stopImmediatePropagation()" 
+             class="surface border border-white/10 w-full max-w-2xl rounded-3xl overflow-hidden">
+            
+            <div class="px-8 py-6 border-b border-white/10 flex items-center justify-between">
+                <div class="font-semibold text-xl" id="modal-title-text">Add New Product</div>
+                <button onclick="closeModal()" class="text-3xl text-[#f5f0e6]/40 hover:text-white">×</button>
+            </div>
+
+            <div class="p-8 space-y-6">
+                <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+                    <div>
+                        <label class="block text-xs tracking-widest text-[#f5f0e6]/60 mb-2">TITLE</label>
+                        <input id="form-title" type="text" class="admin-input w-full rounded-2xl px-4 py-3 text-sm">
+                    </div>
+                    <div>
+                        <label class="block text-xs tracking-widest text-[#f5f0e6]/60 mb-2">PRICE (USD)</label>
+                        <input id="form-price" type="number" class="admin-input w-full rounded-2xl px-4 py-3 text-sm">
+                    </div>
+                </div>
+
+                <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+                    <div>
+                        <label class="block text-xs tracking-widest text-[#f5f0e6]/60 mb-2">CATEGORY</label>
+                        <select id="form-category" class="admin-input w-full rounded-2xl px-4 py-3 text-sm">
+                            <option value="wear">Wear It (Clothing)</option>
+                            <option value="prints">Art Prints</option>
+                            <option value="patches">Patches</option>
+                            <option value="slaps">Slaps / Stickers</option>
+                            <option value="originals">Original Art</option>
+                            <option value="mags">Mags / Zines</option>
+                        </select>
+                    </div>
+                    <div>
+                        <label class="block text-xs tracking-widest text-[#f5f0e6]/60 mb-2">BADGE (optional)</label>
+                        <input id="form-badge" type="text" placeholder="Pre-order • Limited • Best seller" 
+                               class="admin-input w-full rounded-2xl px-4 py-3 text-sm">
+                    </div>
+                </div>
+
+                <div>
+                    <label class="block text-xs tracking-widest text-[#f5f0e6]/60 mb-2">DESCRIPTION</label>
+                    <textarea id="form-description" rows="3" 
+                              class="admin-input w-full rounded-2xl px-4 py-3 text-sm resize-y"></textarea>
+                </div>
+
+                <div>
+                    <label class="block text-xs tracking-widest text-[#f5f0e6]/60 mb-2">IMAGE URL</label>
+                    <input id="form-image" type="text" placeholder="https://... or leave blank for placeholder" 
+                           class="admin-input w-full rounded-2xl px-4 py-3 text-sm" oninput="updateImagePreview()">
+                    <div class="mt-3 flex items-center gap-4">
+                        <div class="w-20 h-20 bg-[#0a0a0a] border border-white/10 rounded-2xl overflow-hidden flex-shrink-0">
+                            <img id="image-preview" src="https://picsum.photos/id/1015/300/300" class="w-full h-full object-cover">
+                        </div>
+                        <div class="text-xs text-[#f5f0e6]/50">Live preview. Use real image links for production.</div>
+                    </div>
+                </div>
+
+                <div>
+                    <label class="block text-xs tracking-widest text-[#f5f0e6]/60 mb-2">VARIANTS (comma separated)</label>
+                    <input id="form-variants" type="text" placeholder="S, M, L, XL" 
+                           class="admin-input w-full rounded-2xl px-4 py-3 text-sm">
+                    <div class="text-[10px] text-[#f5f0e6]/40 mt-1">Example: S, M, L, XL &nbsp;&nbsp;or&nbsp;&nbsp; Standard, Signed</div>
+                </div>
+            </div>
+
+            <div class="px-8 py-6 bg-[#0a0a0a] border-t border-white/10 flex gap-3 justify-end">
+                <button onclick="closeModal()" 
+                        class="px-6 py-3 rounded-2xl border border-white/15 hover:bg-white/5 text-sm">Cancel</button>
+                <button onclick="saveProductFromForm()" 
+                        class="px-8 py-3 bg-[#0f766e] hover:bg-[#115e59] rounded-2xl text-sm font-semibold">Save Product</button>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        // ============================================
+        // SUPABASE CONFIGURATION
+        // ============================================
+        const SUPABASE_URL = 'https://hxisuvcyfmsotiavhiav.supabase.co';
+        const SUPABASE_KEY = 'sb_publishable_B8Dn3MXwiA8W5N-SnNBw_A_F9Xoi3PN';
+        
+        let supabaseClient = null;
+
+        function getSupabaseClient() {
+            if (!supabaseClient && window.supabase) {
+                try {
+                    supabaseClient = window.supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
+                    console.log('%c[Supabase] Client initialized successfully', 'color:#14b8a6');
+                } catch (e) {
+                    console.error('Supabase client failed to initialize:', e);
+                }
+            }
+            return supabaseClient;
+        }
+
+        let products = [];
+        let editingId = null;
+
+        async function loadProducts() {
+            updateSupabaseStatus('connecting');
+
+            const tbody = document.getElementById('products-table-body');
+            if (tbody) {
+                tbody.innerHTML = `
+                    <tr>
+                        <td colspan="6" class="px-6 py-12">
+                            <div class="flex flex-col items-center justify-center text-[#f5f0e6]/60">
+                                <div class="w-6 h-6 border-2 border-[#14b8a6] border-t-transparent rounded-full animate-spin mb-3"></div>
+                                <div class="text-sm">Loading products from Supabase...</div>
+                            </div>
+                        </td>
+                    </tr>
+                `;
+            }
+
+            const client = getSupabaseClient();
+
+            if (client) {
+                try {
+                    const { data, error } = await client
+                        .from('products')
+                        .select('*')
+                        .order('id', { ascending: true });
+
+                    if (error) {
+                        console.error('Supabase query error:', error);
+                        updateSupabaseStatus('error', 'Query failed');
+                        products = getDefaultProducts();
+                    } else if (data && data.length > 0) {
+                        products = data;
+                        console.log('%c[Admin] Loaded ' + data.length + ' products from Supabase', 'color:#14b8a6');
+                        updateSupabaseStatus('connected', 'Connected to Supabase');
+                    } else {
+                        console.warn('Supabase returned 0 products');
+                        updateSupabaseStatus('warning', 'No products in database');
+                        products = [];
+                    }
+                } catch (e) {
+                    console.error('Supabase load exception:', e);
+                    updateSupabaseStatus('error', 'Connection error');
+                    products = getDefaultProducts();
+                }
+            } else {
+                updateSupabaseStatus('error', 'Client not initialized');
+                products = getDefaultProducts();
+            }
+
+            renderTable();
+            updateStats();
+        }
+
+        function updateSupabaseStatus(state, message = '') {
+            const el = document.getElementById('supabase-status');
+            if (!el) return;
+
+            let html = '';
+            if (state === 'connected') {
+                html = `<div class="w-2 h-2 rounded-full bg-emerald-500"></div><span class="text-emerald-400">${message || 'Connected to Supabase'}</span>`;
+            } else if (state === 'connecting') {
+                html = `<div class="w-2 h-2 rounded-full bg-yellow-500 animate-pulse"></div><span>Connecting to Supabase...</span>`;
+            } else if (state === 'error') {
+                html = `<div class="w-2 h-2 rounded-full bg-red-500"></div><span class="text-red-400">${message || 'Supabase error'}</span>`;
+            } else if (state === 'warning') {
+                html = `<div class="w-2 h-2 rounded-full bg-orange-500"></div><span class="text-orange-400">${message}</span>`;
+            }
+            el.innerHTML = html;
+        }
+
+        async function reloadFromSupabase() {
+            await loadProducts();
+        }
+
+        function getDefaultProducts() {
+            return [
+                { id: 1, title: "BE NOT AFRAID", category: "wear", price: 100, image: "https://helaphant.com/cdn/shop/files/Screenshot_20260416-223037_1024x1024@2x.png?v=1776610328", description: "Hand-painted bleach art on premium USA-made cotton. Dark angel motif on the back with raw 'BE NOT AFRAID' lettering across the chest. Every shirt is completely unique.", variants: ["S", "M", "L", "XL"], badge: "Pre-order" },
+                { id: 2, title: "Blood Moon", category: "prints", price: 15, image: "https://picsum.photos/id/1015/800/800", description: "Limited edition archival print. Rich crimson and deep blacks. 11x14\" on heavyweight matte cotton rag paper.", variants: ["Standard", "Signed"], badge: "Limited" },
+                { id: 3, title: "Seal of the Valkyrie", category: "patches", price: 13, image: "https://helaphant.com/cdn/shop/files/rn-image_picker_lib_temp_3aff2d94-36a7-4d00-af1b-526b3f2a2840_1024x1024.jpg?v=1768260461", description: "Iron-on embroidered patch. Heavy duty. For battle jackets, bags, and armor.", variants: ["Single", "Pair"], badge: null },
+                { id: 4, title: "Mouth of a Wolf, Eyes of a Lamb", category: "prints", price: 15, image: "https://picsum.photos/id/1005/800/800", description: "The duality we all carry. High quality giclée print on textured fine art paper.", variants: ["Standard"], badge: null },
+                { id: 5, title: "Dark Fae", category: "prints", price: 15, image: "https://picsum.photos/id/1016/800/800", description: "Mysterious and commanding. One of the most requested prints in the collection.", variants: ["Standard", "Signed + Numbered"], badge: "Best seller" },
+                { id: 6, title: "Patron Saint of the Goobs", category: "prints", price: 15, image: "https://picsum.photos/id/1033/800/800", description: "For the weirdos, the outsiders, and the ones who never fit in. We see you.", variants: ["Standard"], badge: null },
+                { id: 7, title: "Gandalf", category: "prints", price: 15, image: "https://picsum.photos/id/160/800/800", description: "You shall not pass... without this print. A darker take on the classic wizard.", variants: ["Standard"], badge: null },
+                { id: 8, title: "Hand-Painted Bleach Hoodie", category: "wear", price: 145, image: "https://picsum.photos/id/201/800/800", description: "Heavyweight fleece with custom hand-bleached artwork. Extremely limited.", variants: ["M", "L", "XL"], badge: "Limited" }
+            ];
+        }
+
+        function showSaveSuccess() {
+            const savedEl = document.getElementById('stat-saved');
+            if (savedEl) {
+                savedEl.textContent = new Date().toLocaleTimeString([], {hour: '2-digit', minute:'2-digit'});
+            }
+            showToast("Saved to Supabase");
+        }
+
+        function renderTable() {
+            const tbody = document.getElementById('products-table-body');
+            tbody.innerHTML = '';
+
+            if (products.length === 0) {
+                tbody.innerHTML = `<tr><td colspan="6" class="px-6 py-12 text-center text-[#f5f0e6]/50">No products yet. Add your first one above.</td></tr>`;
+                return;
+            }
+
+            products.forEach(product => {
+                const row = document.createElement('tr');
+                row.className = 'product-row border-b border-white/10 last:border-0';
+                
+                const badgeHtml = product.badge 
+                    ? `<span class="text-[10px] px-2 py-0.5 rounded bg-[#0f766e]/20 text-[#14b8a6]">${product.badge}</span>` 
+                    : '';
+
+                row.innerHTML = `
+                    <td class="px-6 py-5 font-mono text-xs text-[#f5f0e6]/40">${product.id}</td>
+                    <td class="px-6 py-5">
+                        <div class="font-medium">${product.title}</div>
+                        <div class="text-xs text-[#f5f0e6]/50 line-clamp-1">${product.description?.substring(0, 70) || ''}...</div>
+                    </td>
+                    <td class="px-6 py-5">
+                        <span class="text-xs uppercase tracking-widest px-3 py-1 rounded-full bg-white/5">${product.category}</span>
+                    </td>
+                    <td class="px-6 py-5 text-right font-mono">$${product.price}</td>
+                    <td class="px-6 py-5">
+                        <div class="w-12 h-12 bg-[#0a0a0a] rounded-2xl overflow-hidden border border-white/10">
+                            <img src="${product.image}" class="w-full h-full object-cover" onerror="this.src='https://picsum.photos/id/1015/300/300'">
+                        </div>
+                    </td>
+                    <td class="px-6 py-5">
+                        <div class="flex items-center gap-x-2">
+                            <button onclick="editProduct(${product.id})" 
+                                    class="px-4 py-1.5 text-xs border border-white/15 hover:bg-white/5 rounded-2xl flex items-center gap-x-1.5">
+                                <i class="fa-solid fa-edit text-xs"></i>
+                                <span>Edit</span>
+                            </button>
+                            <button onclick="deleteProduct(${product.id})" 
+                                    class="px-4 py-1.5 text-xs border border-red-900/40 hover:bg-red-900/10 text-red-400 rounded-2xl flex items-center gap-x-1.5">
+                                <i class="fa-solid fa-trash text-xs"></i>
+                            </button>
+                        </div>
+                    </td>
+                `;
+                tbody.appendChild(row);
+            });
+        }
+
+        function updateStats() {
+            document.getElementById('stat-total').textContent = products.length;
+            
+            const cats = new Set(products.map(p => p.category));
+            document.getElementById('stat-categories').textContent = cats.size;
+
+            const high = Math.max(...products.map(p => p.price));
+            document.getElementById('stat-high').textContent = '$' + high;
+
+            const saved = localStorage.getItem('helaphant_products');
+            const savedEl = document.getElementById('stat-saved');
+            if (saved) {
+                savedEl.textContent = 'Just now';
+            } else {
+                savedEl.textContent = 'Using defaults';
+            }
+        }
+
+        function showAddModal() {
+            editingId = null;
+            document.getElementById('modal-title-text').textContent = 'Add New Product';
+            
+            // Clear form
+            document.getElementById('form-title').value = '';
+            document.getElementById('form-price').value = '';
+            document.getElementById('form-category').value = 'prints';
+            document.getElementById('form-description').value = '';
+            document.getElementById('form-image').value = '';
+            document.getElementById('form-badge').value = '';
+            document.getElementById('form-variants').value = 'Standard';
+            
+            updateImagePreview();
+            document.getElementById('product-modal').classList.remove('hidden');
+            document.getElementById('product-modal').classList.add('flex');
+        }
+
+        function editProduct(id) {
+            const product = products.find(p => p.id === id);
+            if (!product) return;
+
+            editingId = id;
+            document.getElementById('modal-title-text').textContent = 'Edit Product';
+
+            document.getElementById('form-title').value = product.title;
+            document.getElementById('form-price').value = product.price;
+            document.getElementById('form-category').value = product.category;
+            document.getElementById('form-description').value = product.description || '';
+            document.getElementById('form-image').value = product.image || '';
+            document.getElementById('form-badge').value = product.badge || '';
+            document.getElementById('form-variants').value = (product.variants || []).join(', ');
+
+            updateImagePreview();
+            document.getElementById('product-modal').classList.remove('hidden');
+            document.getElementById('product-modal').classList.add('flex');
+        }
+
+        function updateImagePreview() {
+            const input = document.getElementById('form-image').value.trim();
+            const preview = document.getElementById('image-preview');
+            
+            if (input) {
+                preview.src = input;
+            } else {
+                preview.src = 'https://picsum.photos/id/1015/300/300';
+            }
+        }
+
+        async function saveProductFromForm() {
+            const title = document.getElementById('form-title').value.trim();
+            if (!title) {
+                alert("Title is required.");
+                return;
+            }
+
+            const client = getSupabaseClient();
+            if (!client) {
+                alert("Supabase is not connected. Changes won't be saved.");
+                return;
+            }
+
+            // Show loading state on save button
+            const saveBtn = event.currentTarget; // not reliable from form, we'll use a simple approach
+            const originalText = "Save Product";
+
+            const productData = {
+                title: title,
+                price: parseFloat(document.getElementById('form-price').value) || 0,
+                category: document.getElementById('form-category').value,
+                description: document.getElementById('form-description').value.trim(),
+                image: document.getElementById('form-image').value.trim() || 'https://picsum.photos/id/1015/800/800',
+                badge: document.getElementById('form-badge').value.trim() || null,
+                variants: document.getElementById('form-variants').value.split(',').map(v => v.trim()).filter(Boolean)
+            };
+
+            try {
+                if (editingId) {
+                    const { error } = await client
+                        .from('products')
+                        .update(productData)
+                        .eq('id', editingId);
+
+                    if (error) throw error;
+
+                    const index = products.findIndex(p => p.id === editingId);
+                    if (index !== -1) products[index] = { ...products[index], ...productData };
+
+                } else {
+                    const { data, error } = await client
+                        .from('products')
+                        .insert([productData])
+                        .select()
+                        .single();
+
+                    if (error) throw error;
+                    products.push(data);
+                }
+
+                showSaveSuccess();
+                renderTable();
+                updateStats();
+                closeModal();
+
+            } catch (error) {
+                console.error('Supabase save error:', error);
+                alert("Failed to save to Supabase. Check console for details.");
+            }
+        }
+
+        async function deleteProduct(id) {
+            if (!confirm("Delete this product? This cannot be undone.")) return;
+
+            const client = getSupabaseClient();
+            if (!client) {
+                alert("Supabase not connected.");
+                return;
+            }
+
+            // Optimistic UI: remove immediately for better feel
+            const originalProducts = [...products];
+            products = products.filter(p => p.id !== id);
+            renderTable();
+            updateStats();
+
+            try {
+                const { error } = await client
+                    .from('products')
+                    .delete()
+                    .eq('id', id);
+
+                if (error) throw error;
+
+                showSaveSuccess();
+
+            } catch (error) {
+                console.error('Supabase delete error:', error);
+                alert("Failed to delete. Restoring product...");
+                products = originalProducts;
+                renderTable();
+                updateStats();
+            }
+        }
+
+        function closeModal() {
+            const modal = document.getElementById('product-modal');
+            modal.classList.remove('flex');
+            modal.classList.add('hidden');
+            editingId = null;
+        }
+
+        function resetToDefaults() {
+            if (!confirm("This will overwrite all your custom products with the original defaults. Continue?")) return;
+
+            localStorage.removeItem('helaphant_products');
+            products = getDefaultProducts();
+            saveProducts();
+            renderTable();
+            updateStats();
+            showToast("Reset to original Helaphant products.");
+        }
+
+        function showToast(message) {
+            const toast = document.createElement('div');
+            toast.className = `fixed bottom-8 left-1/2 -translate-x-1/2 bg-[#111] border border-[#0f766e]/30 px-6 py-3 rounded-2xl text-sm flex items-center gap-x-3 z-[90]`;
+            toast.innerHTML = `<span>${message}</span>`;
+            document.body.appendChild(toast);
+            
+            setTimeout(() => {
+                toast.style.transition = 'all 0.3s';
+                toast.style.opacity = '0';
+                setTimeout(() => toast.remove(), 200);
+            }, 2800);
+        }
+
+        function logout() {
+            sessionStorage.removeItem('hel_admin_unlocked');
+            window.location.href = "index.html";
+        }
+
+        // === NEW AUTHENTICATION SYSTEM ===
+
+        function getAdminPassword() {
+            // IMPORTANT: Change this default password before going live!
+            // The current protection is client-side only.
+            // For better security later we can add real Supabase user login.
+            return localStorage.getItem('hel_admin_password') || 'helaphant-CHANGE-THIS';
+        }
+
+        function setAdminPassword(newPass) {
+            localStorage.setItem('hel_admin_password', newPass);
+        }
+
+        function isUnlockedThisSession() {
+            return sessionStorage.getItem('hel_admin_unlocked') === 'true';
+        }
+
+        function unlockSession() {
+            sessionStorage.setItem('hel_admin_unlocked', 'true');
+        }
+
+        function showLoginScreen() {
+            const login = document.getElementById('login-screen');
+            if (login) {
+                login.style.display = 'flex';
+            }
+            // Focus the password field
+            setTimeout(() => {
+                const pw = document.getElementById('login-password');
+                if (pw) pw.focus();
+            }, 150);
+        }
+
+        function hideLoginScreen() {
+            const login = document.getElementById('login-screen');
+            if (login) {
+                login.style.display = 'none';
+            }
+        }
+
+        async function attemptLogin() {
+            const input = document.getElementById('login-password').value;
+            const correctPass = getAdminPassword();
+
+            if (input === correctPass) {
+                unlockSession();
+                hideLoginScreen();
+                document.getElementById('admin-content').style.display = 'block';
+                await loadProducts(); // now safe to load from Supabase
+                console.log('%c[Helaphant Admin] Access granted', 'color:#14b8a6');
+            } else {
+                const field = document.getElementById('login-password');
+                field.classList.add('border-red-500');
+                setTimeout(() => field.classList.remove('border-red-500'), 1200);
+                field.value = '';
+                field.placeholder = 'Incorrect password';
+            }
+        }
+
+        function togglePasswordVisibility() {
+            const input = document.getElementById('login-password');
+            const icon = document.getElementById('password-icon');
+            
+            if (input.type === 'password') {
+                input.type = 'text';
+                icon.classList.remove('fa-eye');
+                icon.classList.add('fa-eye-slash');
+            } else {
+                input.type = 'password';
+                icon.classList.remove('fa-eye-slash');
+                icon.classList.add('fa-eye');
+            }
+        }
+
+        function showSetPasswordModal() {
+            // Hide login if visible
+            document.getElementById('login-screen').classList.add('hidden');
+            document.getElementById('login-screen').classList.remove('flex');
+            
+            document.getElementById('set-password-modal').classList.remove('hidden');
+            document.getElementById('set-password-modal').classList.add('flex');
+            
+            // Clear fields
+            document.getElementById('current-password').value = '';
+            document.getElementById('new-password').value = '';
+            document.getElementById('confirm-password').value = '';
+        }
+
+        function closeSetPasswordModal() {
+            document.getElementById('set-password-modal').classList.remove('flex');
+            document.getElementById('set-password-modal').classList.add('hidden');
+            
+            // If we're still locked, show login again
+            if (!isUnlockedThisSession()) {
+                showLoginScreen();
+            }
+        }
+
+        function confirmNewPassword() {
+            const current = document.getElementById('current-password').value;
+            const newPass = document.getElementById('new-password').value;
+            const confirm = document.getElementById('confirm-password').value;
+
+            const correct = getAdminPassword();
+
+            if (current !== correct) {
+                alert("Current password is incorrect.");
+                return;
+            }
+            if (!newPass || newPass.length < 4) {
+                alert("New password must be at least 4 characters.");
+                return;
+            }
+            if (newPass !== confirm) {
+                alert("New passwords do not match.");
+                return;
+            }
+
+            setAdminPassword(newPass);
+            alert("Password changed successfully!");
+
+            closeSetPasswordModal();
+            
+            // If not yet unlocked this session, show login with new password in mind
+            if (!isUnlockedThisSession()) {
+                showLoginScreen();
+            }
+        }
+
+        async function initializeAdmin() {
+            // Check if already unlocked this session
+            if (isUnlockedThisSession()) {
+                document.getElementById('admin-content').style.display = 'block';
+                await loadProducts();
+                console.log('%c[Helaphant Admin] Session restored', 'color:#14b8a6');
+            } else {
+                // First time or new session → show login gate
+                showLoginScreen();
+            }
+
+            // Keyboard shortcut hint
+            console.log('%c[Helaphant Admin] Press Ctrl/Cmd + K to quickly add a new product', 'color:#555');
+        }
+
+        // Keyboard support
+        document.addEventListener('keydown', function(e) {
+            if ((e.ctrlKey || e.metaKey) && e.key === "k") {
+                e.preventDefault();
+                showAddModal();
+            }
+            if (e.key === "Escape") {
+                const modal = document.getElementById('product-modal');
+                if (!modal.classList.contains('hidden')) {
+                    closeModal();
+                }
+            }
+        });
+
+        // Robust early check to prevent blank page
+        document.addEventListener('DOMContentLoaded', () => {
+            try {
+                if (!isUnlockedThisSession()) {
+                    const loginEl = document.getElementById('login-screen');
+                    const contentEl = document.getElementById('admin-content');
+                    if (contentEl) contentEl.style.display = 'none';
+                    if (loginEl) loginEl.style.display = 'flex';
+                }
+            } catch (e) {
+                console.error('Early login check failed:', e);
+            }
+        });
+
+        window.onload = () => initializeAdmin();
+    </script>
+
+    <!-- Login Gate Overlay -->
+    <div id="login-screen" class="fixed inset-0 bg-[#0a0a0a] z-[100] flex items-center justify-center p-6" style="display: none;">
+        <div class="w-full max-w-md">
+            <!-- Logo + Branding -->
+            <div class="flex flex-col items-center mb-8">
+                <img src="images/logo.png" alt="Helaphant Logo" class="h-14 w-auto object-contain mb-4 transition-transform duration-300 hover:scale-110">
+                <div class="text-center">
+                    <div class="font-semibold text-2xl tracking-[-0.5px]">WAR HELAPHANT</div>
+                    <div class="text-[#14b8a6] text-sm tracking-[3px] mt-0.5">ADMIN ACCESS</div>
+                </div>
+            </div>
+
+            <div class="surface border border-white/10 rounded-3xl p-8">
+                <div class="text-center mb-6">
+                    <div class="text-lg font-medium">Enter Password</div>
+                    <div class="text-xs text-[#f5f0e6]/50 mt-1">This protects the product editor</div>
+                </div>
+
+                <div class="space-y-4">
+                    <div>
+                        <label class="text-xs tracking-widest text-[#f5f0e6]/60 block mb-2">PASSWORD</label>
+                        <div class="relative">
+                            <input id="login-password" type="password" 
+                                   class="admin-input w-full rounded-2xl px-4 py-3.5 text-sm pr-12"
+                                   placeholder="••••••••" 
+                                   onkeyup="if (event.key === 'Enter') attemptLogin()">
+                            <button onclick="togglePasswordVisibility()" 
+                                    class="absolute right-4 top-1/2 -translate-y-1/2 text-[#f5f0e6]/50 hover:text-[#f5f0e6]">
+                                <i id="password-icon" class="fa-solid fa-eye"></i>
+                            </button>
+                        </div>
+                    </div>
+
+                    <button onclick="attemptLogin()" 
+                            class="w-full py-4 bg-[#0f766e] hover:bg-[#115e59] rounded-2xl font-semibold text-sm tracking-wide transition-colors">
+                        UNLOCK ADMIN
+                    </button>
+
+                    <div class="text-center">
+                        <button onclick="showSetPasswordModal()" 
+                                class="text-xs text-[#14b8a6] hover:underline">
+                            Set or change password
+                        </button>
+                    </div>
+                </div>
+            </div>
+
+            <div class="text-center mt-6 text-[11px] text-[#f5f0e6]/40">
+                Default password on first use: <span class="font-mono text-[#14b8a6]">helaphant</span>
+            </div>
+        </div>
+    </div>
+
+    <!-- Set New Password Modal -->
+    <div id="set-password-modal" onclick="if (event.target.id === 'set-password-modal') closeSetPasswordModal()" 
+         class="hidden fixed inset-0 bg-black/90 z-[110] flex items-center justify-center p-6">
+        <div onclick="event.stopImmediatePropagation()" 
+             class="surface border border-white/10 w-full max-w-md rounded-3xl p-8">
+            <div class="flex justify-between items-center mb-6">
+                <div class="font-semibold text-xl">Set New Password</div>
+                <button onclick="closeSetPasswordModal()" class="text-2xl text-[#f5f0e6]/50">×</button>
+            </div>
+
+            <div class="space-y-5">
+                <div>
+                    <label class="text-xs tracking-widest text-[#f5f0e6]/60 block mb-2">CURRENT PASSWORD</label>
+                    <input id="current-password" type="password" class="admin-input w-full rounded-2xl px-4 py-3 text-sm">
+                </div>
+                <div>
+                    <label class="text-xs tracking-widest text-[#f5f0e6]/60 block mb-2">NEW PASSWORD</label>
+                    <input id="new-password" type="password" class="admin-input w-full rounded-2xl px-4 py-3 text-sm">
+                </div>
+                <div>
+                    <label class="text-xs tracking-widest text-[#f5f0e6]/60 block mb-2">CONFIRM NEW PASSWORD</label>
+                    <input id="confirm-password" type="password" class="admin-input w-full rounded-2xl px-4 py-3 text-sm">
+                </div>
+            </div>
+
+            <div class="flex gap-3 mt-8">
+                <button onclick="closeSetPasswordModal()" 
+                        class="flex-1 py-3 rounded-2xl border border-white/15 text-sm">Cancel</button>
+                <button onclick="confirmNewPassword()" 
+                        class="flex-1 py-3 bg-[#0f766e] hover:bg-[#115e59] rounded-2xl text-sm font-semibold">Save New Password</button>
+            </div>
+
+            <div class="text-[10px] text-center text-[#f5f0e6]/40 mt-6">
+                Password is stored only in this browser.
+            </div>
+        </div>
+    </div>
+</body>
+</html>

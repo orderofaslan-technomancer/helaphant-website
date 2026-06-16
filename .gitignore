@@ -1,0 +1,17 @@
+# OS files
+.DS_Store
+Thumbs.db
+
+# Editor
+.vscode/
+.idea/
+
+# Local env / secrets (never commit real keys)
+.env
+.env.local
+netlify.toml.bak
+
+# Build artifacts (if we add any later)
+dist/
+build/
+*.log
