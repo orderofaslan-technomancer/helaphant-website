@@ -158,14 +158,28 @@ To upload images directly:
 - `images/` — Assets (logo.png is the current one)
 - `netlify.toml` — Deployment config
 
-## Next Immediate Actions (to get it functional)
-1. Deploy via Netlify drag-and-drop (see above).
-2. In Supabase, create an "orders" table (if you want order history):
-   - Columns: id (uuid, primary), name (text), email (text), notes (text), cart_summary (text), total (numeric), status (text default 'new'), created_at (timestamp with time zone default now()).
-   - Enable RLS read for authenticated or service role if adding admin view.
-3. Sign up for Stripe → get publishable key → paste into index.html.
-4. Update your Shopify domain DNS to point to the Netlify site (detailed steps in the Custom Domain section above).
-5. Test: Add product in admin, buy in shop, check Netlify Forms and Supabase for the order.
+## Next Immediate Actions (to launch)
+1. **Domain/SSL**: DNS updated in Shopify (A 75.2.60.5, CNAME www to Netlify subdomain). Wait for propagation (dnschecker.org). Netlify auto SSL. Test at https://helaphant.com.
+2. **Enable Stripe payments** (TEST KEYS CONFIGURED):
+   - Publishable key is set in `index.html`.
+   - **Set the secret in Netlify**: Site settings → Environment variables → Add `STRIPE_SECRET_KEY` = your `sk_test_...`
+   - `git add . ; git commit -m "Configure Stripe keys" ; git push`
+   - Netlify redeploys. "PAY WITH CARD (STRIPE)" will now create real Checkout sessions.
+   - Test card: 4242 4242 4242 4242 (any future date / any CVC). This is test mode only.
+3. **Supabase**:
+   - Create "orders" table for history (id, name, email, notes, cart_summary, total, status, created_at).
+   - Set Site URL in Supabase to https://helaphant.com.
+4. **Admin**: Change password in admin.html (search helaphant-CHANGE-THIS-NOW).
+5. **Test**:
+   - Browse, cart, submit form (Netlify Forms emails you).
+   - Admin: manage products (live on shop).
+6. **Polish**:
+   - More products.
+   - Mobile test.
+   - Optional: Supabase Storage for admin image uploads.
+   - Set Supabase Auth Site URL to https://helaphant.com in Supabase dashboard.
+
+The site is now deployable and mostly launch-ready. Forms give basic e-commerce (order collection). Stripe adds payments.
 
 ## Saving Progress to GitHub (Recommended)
 

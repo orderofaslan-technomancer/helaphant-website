@@ -1,0 +1,8 @@
+{
+  "name": "helaphant-website",
+  "version": "1.0.0",
+  "description": "Helaphant custom website with Supabase and Netlify",
+  "dependencies": {
+    "stripe": "^14.0.0"
+  }
+}
