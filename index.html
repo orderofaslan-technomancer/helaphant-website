@@ -1060,7 +1060,7 @@
             }
 
             if (STRIPE_PUBLISHABLE_KEY.includes('YOUR_STRIPE')) {
-                alert(`Stripe not configured yet.\n\nTo enable real card payments:\n1. In Netlify dashboard: Site settings → Environment variables → add STRIPE_SECRET_KEY = your sk_test_... key.\n2. Copy your pk_test_... publishable key from Stripe dashboard.\n3. Paste the pk into STRIPE_PUBLISHABLE_KEY here in index.html.\n4. Commit + push (or deploy) to redeploy.\n\nUse the email form button as fallback for now.`);
+                alert('Stripe publishable key is still the placeholder. Check index.html.');
                 return;
             }
 
@@ -1078,6 +1078,8 @@
             }
 
             try {
+                console.log('[Stripe] Starting checkout, cart items:', cart.length);
+
                 // Call our Netlify function to create the Checkout Session
                 const response = await fetch('/.netlify/functions/create-stripe-checkout', {
                     method: 'POST',
@@ -1090,14 +1092,27 @@
                     })
                 });
 
+                const data = await response.json().catch(() => ({}));
+
                 if (!response.ok) {
-                    const errorData = await response.json().catch(() => ({}));
-                    throw new Error(errorData.error || 'Failed to create checkout session');
+                    console.error('[Stripe] Function error response:', data);
+                    throw new Error(data.error || 'Failed to create checkout session');
                 }
 
-                const { id: sessionId } = await response.json();
+                console.log('[Stripe] Session created:', data);
 
-                // Redirect to Stripe Checkout
+                // Prefer the hosted checkout url (most reliable), fallback to redirectToCheckout
+                if (data.url) {
+                    console.log('[Stripe] Redirecting to hosted url');
+                    window.location.href = data.url;
+                    return;
+                }
+
+                const sessionId = data.id;
+                if (!sessionId) {
+                    throw new Error('No session id returned');
+                }
+
                 const { error } = await stripe.redirectToCheckout({ sessionId });
                 if (error) {
                     console.error('Stripe redirect error:', error);

@@ -53,10 +53,15 @@ exports.handler = async (event) => {
       body: JSON.stringify({ id: session.id, url: session.url }),
     };
   } catch (error) {
-    console.error('Stripe error:', error);
+    console.error('Stripe checkout error:', error);
+    const msg = (error && error.message) ? error.message : '';
+    let friendly = 'Failed to create checkout session';
+    if (msg.toLowerCase().includes('key') || msg.toLowerCase().includes('api')) {
+      friendly = 'Stripe secret not configured (check Netlify env var STRIPE_SECRET_KEY)';
+    }
     return {
       statusCode: 500,
-      body: JSON.stringify({ error: 'Failed to create checkout session' }),
+      body: JSON.stringify({ error: friendly }),
     };
   }
 };
