@@ -308,6 +308,17 @@
           style="width:100%; max-width:900px; height:560px; border:none; display:block; margin:0 auto;"
           title="Helaphant: Zombie Sketch game"
         ></iframe>
+
+        <!-- Leaderboard -->
+        <div class="mt-6">
+          <div class="text-center mb-2">
+            <span class="hel-text tracking-[2px] text-[#0f766e] text-xs">LEADERBOARD</span>
+          </div>
+          <div id="leaderboard" class="max-w-[420px] mx-auto text-xs bg-[#0a0a0a]/80 border border-white/10 rounded-xl p-3 overflow-hidden">
+            <p class="text-center text-[#f5f0e6]/50 text-xs">Loading top scores...</p>
+          </div>
+          <p class="text-[10px] text-center text-[#f5f0e6]/40 mt-1">Top scores from the Zombie Sketch. Submit your score from inside the game!</p>
+        </div>
     </section>
 
     <!-- Shop Categories -->
@@ -563,6 +574,72 @@
             }
             return supabaseClient;
         }
+
+        // === GAME LEADERBOARD (Supabase) ===
+        /*
+          Supabase table needed (run in SQL editor):
+          create table game_scores (
+            id uuid default gen_random_uuid() primary key,
+            player_name text not null,
+            score int not null,
+            waves_cleared int,
+            created_at timestamptz default now()
+          );
+          alter table game_scores enable row level security;
+          create policy "public read" on game_scores for select using (true);
+          create policy "public insert" on game_scores for insert with check (true);
+        */
+        async function submitGameScore(playerName, score, wavesCleared) {
+            const client = getSupabaseClient();
+            if (!client) return;
+            try {
+                await client.from('game_scores').insert([{
+                    player_name: playerName || 'Anonymous',
+                    score: score,
+                    waves_cleared: wavesCleared
+                }]);
+                console.log('%c[Leaderboard] Score submitted', 'color:#14b8a6');
+                loadLeaderboard();
+            } catch (e) {
+                console.error('Leaderboard submit failed:', e);
+            }
+        }
+
+        async function loadLeaderboard() {
+            const client = getSupabaseClient();
+            const container = document.getElementById('leaderboard');
+            if (!client || !container) return;
+            try {
+                const { data, error } = await client
+                    .from('game_scores')
+                    .select('player_name, score, waves_cleared')
+                    .order('score', { ascending: false })
+                    .limit(10);
+                if (error) throw error;
+                if (!data || data.length === 0) {
+                    container.innerHTML = '<p class="text-center text-xs text-[#f5f0e6]/50 py-1">No scores yet — be the first!</p>';
+                    return;
+                }
+                let html = `<table class="w-full text-[11px]"><thead><tr class="text-[#14b8a6]/90"><th class="text-left py-0.5 pr-1">#</th><th class="text-left">Name</th><th class="text-right">Score</th><th class="text-right pl-1">Waves</th></tr></thead><tbody>`;
+                data.forEach((row, i) => {
+                    const safeName = (row.player_name || 'Anon').substring(0, 12);
+                    html += `<tr class="border-t border-white/10"><td class="py-px pr-1 text-[#f5f0e6]/60">${i+1}</td><td class="py-px">${safeName}</td><td class="text-right font-mono text-[#14b8a6]">${row.score}</td><td class="text-right pl-1 text-[#f5f0e6]/70">${row.waves_cleared || 0}</td></tr>`;
+                });
+                html += `</tbody></table>`;
+                container.innerHTML = html;
+            } catch (e) {
+                console.error('Leaderboard load error:', e);
+                container.innerHTML = '<p class="text-xs text-red-400/60">Unable to load leaderboard</p>';
+            }
+        }
+
+        // Listen for scores from the game iframe
+        window.addEventListener('message', (event) => {
+            if (event.data && event.data.type === 'gameScore') {
+                const { playerName, score, wavesCleared } = event.data;
+                submitGameScore(playerName, score, wavesCleared);
+            }
+        });
 
         // ============================================
         // Tailwind config
@@ -1321,6 +1398,7 @@
             await initProducts();           // Now properly waits for Supabase or fallback
             initMobileMenu();
             initDiscount();  // loads any discount codes saved from the game
+            loadLeaderboard();  // top game scores (requires game_scores table in Supabase)
             updateCartCount();
 
             // Easter egg: Konami-ish hint in console
