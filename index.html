@@ -291,13 +291,16 @@
         </div>
     </div>
 
-    <!-- The Art of War Game -->
     <!-- Game Section -->
     <section id="game" class="max-w-5xl mx-auto px-8 py-20 border-b border-white/10">
         <div class="text-center mb-8">
-            <div class="hel-text tracking-[3px] text-[#0f766e]">THE ART OF WAR</div>
-            <h3 class="heading-serif text-6xl tracking-[-2px]">Helaphant: Tactical Artist</h3>
-            <p class="mt-3 text-[#f5f0e6]/70 max-w-md mx-auto">Play as Helaphant the tactical artist. Survive the horde and unlock a discount code!</p>
+            <div class="hel-text tracking-[3px] text-[#0f766e]">ZOMBIE SKETCH</div>
+            <h3 class="heading-serif text-6xl tracking-[-2px]">Helaphant: Zombie Sketch</h3>
+            <p class="mt-3 text-[#f5f0e6]/70 max-w-lg mx-auto">
+                Wave-based survival shooter. Clear Wave 6 to unlock <span class="font-mono text-[#14b8a6]">HELAART10</span> (10% off).<br>
+                Clear Wave 10 to unlock <span class="font-mono text-[#14b8a6]">HELAART20</span> (20% off).
+            </p>
+            <p class="text-xs text-[#f5f0e6]/50 mt-2">Controls inside the game. Copy the code and apply it at checkout.</p>
         </div>
 
         <iframe
@@ -1225,596 +1228,26 @@
         }
 
         // ============================================
+        // Game moved to self-contained iframe: helaphant_game.html
+        // (Zombie Sketch version with waves, reload, drones, crates)
         // ============================================
-        // HELAPHANT THE TACTICAL ARTIST - 16-BIT SIDE SCROLLER
-        // Player = Helaphant (blonde hair, hat, green gaiter, black clothes, green chest rig)
-        // Shoot demons wearing turbans. Collect cookie dough for health.
-        // Move: W/S or ↑/↓    Shoot: SPACE or CLICK
-        // High score or survival unlocks discount
-        // ============================================
-        let gameCanvas, gameCtx;
-        let gamePlayer = { x: 85, y: 190, w: 26, h: 22, health: 100, maxHealth: 100, shootCooldown: 0 };
-        let gameBullets = [];
-        let gameEnemies = [];
-        let gameCookies = [];
-        let gameScore = 0;
-        let gameTimeLeft = 60;
-        let gameActive = false;
-        let gameKeys = {};
-        let mouseDown = false;
-        let gameLastEnemySpawn = 0;
-        let gameLastCookieSpawn = 0;
-        let gameTimerInterval = null;
 
-        function setupGame() {
-            gameCanvas = document.getElementById('game-canvas');
-            if (!gameCanvas) return;
-            gameCtx = gameCanvas.getContext('2d');
-            gameCtx.imageSmoothingEnabled = false;
 
-            // Draw a static preview so the canvas isn't just a blank black square
-            drawGamePreview();
 
-            const startBtn = document.getElementById('game-start-btn');
-            const resetBtn = document.getElementById('game-reset-btn');
-            const resultDiv = document.getElementById('game-result');
 
-            if (startBtn) startBtn.addEventListener('click', startGame);
-            if (resetBtn) resetBtn.addEventListener('click', () => {
-                if (resultDiv) resultDiv.classList.add('hidden');
-                if (resetBtn) resetBtn.classList.add('hidden');
-                startGame();
-            });
 
-            // Keyboard
-            document.addEventListener('keydown', (e) => {
-                gameKeys[e.key.toLowerCase()] = true;
-                if ((e.key === ' ' || e.key.toLowerCase() === 'k') && gameActive) {
-                    e.preventDefault();
-                    shootBullet();
-                }
-            });
-            document.addEventListener('keyup', (e) => { gameKeys[e.key.toLowerCase()] = false; });
 
-            // Mouse move to aim/move player vertically (single listener)
-            gameCanvas.addEventListener('mousemove', (e) => {
-                if (gameActive) {
-                    const rect = gameCanvas.getBoundingClientRect();
-                    gamePlayer.y = Math.max(30, Math.min(gameCanvas.height - 30, e.clientY - rect.top));
-                }
-            });
 
-            // Click / touch to shoot (separate from move)
-            function doShoot(e) {
-                if (gameActive) {
-                    e.preventDefault();
-                    shootBullet();
-                }
-            }
-            gameCanvas.addEventListener('mousedown', doShoot);
-            gameCanvas.addEventListener('click', doShoot);
-            gameCanvas.addEventListener('touchstart', doShoot, {passive: false});
-        }
 
-        function startGame() {
-            const startBtn = document.getElementById('game-start-btn');
-            const resetBtn = document.getElementById('game-reset-btn');
-            const resultDiv = document.getElementById('game-result');
 
-            gamePlayer = { x: 85, y: 190, w: 26, h: 22, health: 100, maxHealth: 100, shootCooldown: 0 };
-            gameBullets = [];
-            gameEnemies = [];
-            gameCookies = [];
-            gameScore = 0;
-            gameTimeLeft = 60;
-            gameActive = true;
-            gameLastEnemySpawn = Date.now();
-            gameLastCookieSpawn = Date.now();
 
-            if (startBtn) startBtn.classList.add('hidden');
-            if (resetBtn) resetBtn.classList.add('hidden');
-            if (resultDiv) resultDiv.classList.add('hidden');
 
-            updateGameHUD();
-
-            for (let i = 0; i < 7; i++) {
-                // Spawn many already on screen and close for instant action
-                const e = { x: gameCanvas.width * (0.25 + Math.random() * 0.55), y: 30 + Math.random() * (gameCanvas.height - 60), w: 20, h: 18, vx: -2.8 - Math.random() * 0.9 };
-                gameEnemies.push(e);
-            }
-            for (let i = 0; i < 4; i++) spawnCookie();
-            // Kick several frames of update/draw so movement is visible immediately
-            for (let k = 0; k < 8; k++) {
-                updateGame();
-                drawGame();
-            }
-            // Auto-shoot a few times so bullets are obvious right away
-            setTimeout(() => { if (gameActive) shootBullet(); }, 100);
-            setTimeout(() => { if (gameActive) shootBullet(); }, 350);
-            setTimeout(() => { if (gameActive) shootBullet(); }, 600);
-            setTimeout(() => { if (gameActive) shootBullet(); }, 850);
-            // Then start the loop
-            requestAnimationFrame(gameLoop);
-
-            if (gameTimerInterval) clearInterval(gameTimerInterval);
-            gameTimerInterval = setInterval(() => {
-                if (!gameActive) return;
-                gameTimeLeft = Math.max(0, gameTimeLeft - 1);
-                updateGameHUD();
-                if (gameTimeLeft <= 0) endGame();
-            }, 1000);
-
-            requestAnimationFrame(gameLoop);
-        }
-
-        function endGame() {
-            gameActive = false;
-            if (gameTimerInterval) { clearInterval(gameTimerInterval); gameTimerInterval = null; }
-
-            const resultDiv = document.getElementById('game-result');
-            const resetBtn = document.getElementById('game-reset-btn');
-            const startBtn = document.getElementById('game-start-btn');
-
-            let html = `<div class="p-6 rounded-2xl border border-white/10">`;
-            html += `<div class="text-3xl font-semibold mb-1">Final Score: <span class="font-mono">${gameScore}</span></div>`;
-
-            let code = '';
-            let percent = 0;
-            let title = '';
-
-            if (gameScore >= 1800 || gameTimeLeft > 12) {
-                percent = 25; code = 'HELA-' + Math.random().toString(36).substr(2,6).toUpperCase(); title = 'LEGENDARY TACTICAL ARTIST!';
-            } else if (gameScore >= 1100) {
-                percent = 15; code = 'HELA-' + Math.random().toString(36).substr(2,6).toUpperCase(); title = 'Skilled Operative!';
-            } else if (gameScore >= 600) {
-                percent = 10; code = 'HELA-' + Math.random().toString(36).substr(2,6).toUpperCase(); title = 'Solid Run!';
-            } else {
-                html += `<div class="text-[#f5f0e6]/70 mb-2">Good effort, Helaphant. Try again!</div>`;
-            }
-
-            if (title) html += `<div class="text-[#14b8a6] text-xl font-medium mb-2">${title} ${percent}% OFF unlocked</div>`;
-            html += `</div>`;
-
-            if (resultDiv) { resultDiv.innerHTML = html; resultDiv.classList.remove('hidden'); }
-
-            if (code) {
-                const discount = { code, percent, ts: Date.now() };
-                try {
-                    localStorage.setItem('hel_discount', JSON.stringify(discount));
-                } catch (e) {
-                    console.warn('localStorage unavailable for discount:', e);
-                    // fallback: just use in-memory
-                    window.currentDiscount = discount;
-                }
-                window.currentDiscount = discount;
-
-                const codeHtml = `
-                    <div class="mt-4 p-4 bg-[#111] border border-[#14b8a6]/30 rounded-2xl">
-                        <div class="text-sm text-[#f5f0e6]/70 mb-1">Your discount code:</div>
-                        <div class="font-mono text-2xl text-[#14b8a6] mb-3">${code} — ${percent}% OFF</div>
-                        <div class="flex gap-3 justify-center">
-                            <button onclick="copyDiscountCode('${code}')" class="px-5 py-2 border border-white/15 rounded-2xl text-sm">Copy Code</button>
-                            <button onclick="applyDiscountToCart('${code}', ${percent}); closeGameResult();" class="px-5 py-2 bg-[#14b8a6] text-[#0a0a0a] rounded-2xl text-sm font-medium">Apply to Cart</button>
-                        </div>
-                    </div>`;
-                resultDiv.innerHTML += codeHtml;
-            }
-
-            if (resetBtn) resetBtn.classList.remove('hidden');
-            if (startBtn) startBtn.classList.add('hidden');
-        }
-
-        function closeGameResult() {
-            const resultDiv = document.getElementById('game-result');
-            if (resultDiv) resultDiv.classList.add('hidden');
-        }
-
-        function updateGameHUD() {
-            const scoreEl = document.getElementById('game-score');
-            const timeEl = document.getElementById('game-time');
-            const comboEl = document.getElementById('game-combo');
-            if (scoreEl) scoreEl.textContent = gameScore;
-            if (timeEl) timeEl.textContent = Math.max(0, gameTimeLeft);
-            if (comboEl) comboEl.textContent = gameCombo > 1 ? `x${gameCombo}` : '';
-        }
-
-        function shootBullet() {
-            if (gamePlayer.shootCooldown > 0) return;
-            gameBullets.push({ x: gamePlayer.x + gamePlayer.w + 2, y: gamePlayer.y + 8, w: 18, h: 4, vx: 7 });
-            gameBullets.push({ x: gamePlayer.x + gamePlayer.w + 2, y: gamePlayer.y + 11, w: 16, h: 3, vx: 7.2 });
-            gamePlayer.shootCooldown = 6;  // faster fire rate for better shooter feel
-        }
-
-        function spawnEnemy() {
-            const y = 35 + Math.random() * (gameCanvas.height - 70);
-            gameEnemies.push({ x: gameCanvas.width + 8, y, w: 20, h: 18, vx: -2.0 - Math.random() * 0.7 });
-        }
-
-        function spawnCookie() {
-            const y = 45 + Math.random() * (gameCanvas.height - 90);
-            gameCookies.push({ x: gameCanvas.width + 8, y, w: 13, h: 9, vx: -1.1 });
-        }
-
-        function updateGame() {
-            if (!gameActive) return;
-
-            // Player vertical movement
-            if (gameKeys['w'] || gameKeys['arrowup']) gamePlayer.y -= 3.2;
-            if (gameKeys['s'] || gameKeys['arrowdown']) gamePlayer.y += 3.2;
-            else {
-                // demo bob so the player is obviously active even without input
-                gamePlayer.y += Math.sin(Date.now() / 280) * 0.7;
-            }
-            gamePlayer.y = Math.max(28, Math.min(gameCanvas.height - 28, gamePlayer.y));
-
-            if (gamePlayer.shootCooldown > 0) gamePlayer.shootCooldown--;
-
-            // Continuous fire while holding space or mouse button (standard for shooters)
-            if (gameActive && gamePlayer.shootCooldown <= 0 && (gameKeys[' '] || gameKeys['k'] || mouseDown)) {
-                shootBullet();
-            }
-
-            // Bullets
-            for (let i = gameBullets.length - 1; i >= 0; i--) {
-                const b = gameBullets[i];
-                b.x += b.vx;
-                if (b.x > gameCanvas.width) gameBullets.splice(i, 1);
-            }
-
-            // Enemies
-            for (let i = gameEnemies.length - 1; i >= 0; i--) {
-                const e = gameEnemies[i];
-                e.x += e.vx;
-
-                if (checkCollision(e, gamePlayer)) {
-                    gamePlayer.health = Math.max(0, gamePlayer.health - 20);
-                    gameEnemies.splice(i, 1);
-                    if (gamePlayer.health <= 0) { endGame(); return; }
-                    continue;
-                }
-                if (e.x < -30) gameEnemies.splice(i, 1);
-            }
-
-            // Cookies
-            for (let i = gameCookies.length - 1; i >= 0; i--) {
-                const c = gameCookies[i];
-                c.x += c.vx;
-                if (checkCollision(c, gamePlayer)) {
-                    gamePlayer.health = Math.min(gamePlayer.maxHealth, gamePlayer.health + 24);
-                    gameScore += 25;
-                    gameCookies.splice(i, 1);
-                    continue;
-                }
-                if (c.x < -20) gameCookies.splice(i, 1);
-            }
-
-            // Bullets vs Enemies
-            for (let b = gameBullets.length - 1; b >= 0; b--) {
-                for (let e = gameEnemies.length - 1; e >= 0; e--) {
-                    if (checkCollision(gameBullets[b], gameEnemies[e])) {
-                        gameScore += 12;
-                        gameBullets.splice(b, 1);
-                        gameEnemies.splice(e, 1);
-                        break;
-                    }
-                }
-            }
-
-            // Spawning (gets harder)
-            const now = Date.now();
-            if (now - gameLastEnemySpawn > 480) { spawnEnemy(); gameLastEnemySpawn = now; }
-            if (now - gameLastCookieSpawn > 1700) { spawnCookie(); gameLastCookieSpawn = now; }
-
-            // Ramp difficulty
-            if (gameTimeLeft < 35 && now - gameLastEnemySpawn > 340) { spawnEnemy(); gameLastEnemySpawn = now; }
-
-            updateGameHUD();
-        }
-
-        function checkCollision(a, b) {
-            return !(a.x + a.w < b.x || a.x > b.x + b.w || a.y + a.h < b.y || a.y > b.y + b.h);
-        }
-
-        function drawPlayer16bit(ctx, p) {
-            // 16-bit blocky style - high contrast for dark bg
-            // legs black
-            ctx.fillStyle = '#111';
-            ctx.fillRect(p.x + 4, p.y + 15, 6, 8);
-            ctx.fillRect(p.x + 16, p.y + 15, 6, 8);
-
-            // torso black
-            ctx.fillStyle = '#111';
-            ctx.fillRect(p.x + 5, p.y + 6, 16, 11);
-
-            // green chest rig (brighter green for visibility)
-            ctx.fillStyle = '#2e8b57';
-            ctx.fillRect(p.x + 6, p.y + 7, 14, 9);
-
-            // gun magazines in rig (darker)
-            ctx.fillStyle = '#222';
-            ctx.fillRect(p.x + 8, p.y + 8, 2, 5);
-            ctx.fillRect(p.x + 12, p.y + 8, 2, 5);
-            ctx.fillRect(p.x + 16, p.y + 8, 2, 5);
-
-            // head skin tone
-            ctx.fillStyle = '#f5d0a9';
-            ctx.fillRect(p.x + 8, p.y + 1, 10, 7);
-
-            // blonde hair (bright yellow for 16-bit pop)
-            ctx.fillStyle = '#ffeb3b';
-            ctx.fillRect(p.x + 7, p.y - 1, 12, 3);
-            ctx.fillRect(p.x + 7, p.y + 1, 3, 5);
-
-            // hat (dark with brim)
-            ctx.fillStyle = '#222';
-            ctx.fillRect(p.x + 6, p.y - 2, 14, 3); // top
-            ctx.fillRect(p.x + 5, p.y + 0, 16, 2); // brim
-
-            // green gaiter covering lower face (bright green)
-            ctx.fillStyle = '#2e8b57';
-            ctx.fillRect(p.x + 8, p.y + 4, 10, 4);
-
-            // gun (dark metal)
-            ctx.fillStyle = '#333';
-            ctx.fillRect(p.x + 20, p.y + 8, 12, 3);   // barrel
-            ctx.fillRect(p.x + 18, p.y + 6, 5, 7);    // receiver
-
-            // simple arm
-            ctx.fillStyle = '#f5d0a9';
-            ctx.fillRect(p.x + 17, p.y + 8, 5, 3);
-        }
-
-        function drawEnemy16bit(ctx, e) {
-            // 16-bit demon with turban - brighter for visibility
-            ctx.fillStyle = '#4a2a2a';  // body
-            ctx.fillRect(e.x + 2, e.y + 4, 16, 12);
-            ctx.fillStyle = '#f5d0a9';  // head
-            ctx.fillRect(e.x + 4, e.y + 1, 12, 6);
-            ctx.fillStyle = '#8b5a2b';  // turban (brown)
-            ctx.fillRect(e.x + 3, e.y - 2, 14, 4);
-            ctx.fillRect(e.x + 4, e.y + 2, 12, 2);
-            ctx.fillStyle = '#ff4444';  // menacing red eyes
-            ctx.fillRect(e.x + 6, e.y + 3, 2, 2);
-            ctx.fillRect(e.x + 11, e.y + 3, 2, 2);
-            // simple detail line
-            ctx.fillStyle = '#222';
-            ctx.fillRect(e.x + 5, e.y + 6, 10, 1);
-        }
-
-        function drawCookie16bit(ctx, c) {
-            ctx.fillStyle = '#ffeb3b';  // bright yellow for cookie dough
-            ctx.fillRect(c.x, c.y, c.w, c.h);
-            ctx.fillStyle = '#8b6914';
-            ctx.fillRect(c.x + 2, c.y + 2, 2, 2);
-            ctx.fillRect(c.x + 6, c.y + 5, 2, 2);
-            ctx.fillRect(c.x + 3, c.y + 6, 2, 2);
-        }
-
-        function updateGame() {
-            if (!gameActive) return;
-
-            // player y already updated by keys
-
-            // bullets
-            for (let i = gameBullets.length - 1; i >= 0; i--) {
-                const b = gameBullets[i];
-                b.x += b.vx;
-                if (b.x > gameCanvas.width) gameBullets.splice(i, 1);
-            }
-
-            // enemies
-            for (let i = gameEnemies.length - 1; i >= 0; i--) {
-                const e = gameEnemies[i];
-                e.x += e.vx;
-
-                if (checkCollision(e, gamePlayer)) {
-                    gamePlayer.health = Math.max(0, gamePlayer.health - 20);
-                    gameEnemies.splice(i, 1);
-                    if (gamePlayer.health <= 0) { endGame(); return; }
-                    continue;
-                }
-                if (e.x < -30) gameEnemies.splice(i, 1);
-            }
-
-            // cookies
-            for (let i = gameCookies.length - 1; i >= 0; i--) {
-                const c = gameCookies[i];
-                c.x += c.vx;
-                if (checkCollision(c, gamePlayer)) {
-                    gamePlayer.health = Math.min(gamePlayer.maxHealth, gamePlayer.health + 24);
-                    gameScore += 25;
-                    gameCookies.splice(i, 1);
-                    continue;
-                }
-                if (c.x < -20) gameCookies.splice(i, 1);
-            }
-
-            // bullet-enemy
-            for (let b = gameBullets.length - 1; b >= 0; b--) {
-                for (let e = gameEnemies.length - 1; e >= 0; e--) {
-                    if (checkCollision(gameBullets[b], gameEnemies[e])) {
-                        gameScore += 12;
-                        gameBullets.splice(b, 1);
-                        gameEnemies.splice(e, 1);
-                        break;
-                    }
-                }
-            }
-
-            // spawning
-            const now = Date.now();
-            if (now - gameLastEnemySpawn > 280) { spawnEnemy(); gameLastEnemySpawn = now; }  // very fast spawns for immediate action
-            if (now - gameLastCookieSpawn > 1200) { spawnCookie(); gameLastCookieSpawn = now; }
-
-            // ramp even faster
-            if (gameTimeLeft < 45 && now - gameLastEnemySpawn > 180) { spawnEnemy(); gameLastEnemySpawn = now; }
-
-            updateGameHUD();
-        }
-
-        function drawGame() {
-            if (!gameCtx) return;
-
-            // 16-bit dark background with better contrast
-            gameCtx.fillStyle = '#0a0a0a';
-            gameCtx.fillRect(0, 0, gameCanvas.width, gameCanvas.height);
-
-            // ground / horizon - more visible 16-bit style
-            gameCtx.fillStyle = '#2a2218';
-            gameCtx.fillRect(0, gameCanvas.height - 55, gameCanvas.width, 55);
-
-            // parallax scrolling ground lines (brighter for visibility)
-            const scroll = (Date.now() / 35) % 36;
-            gameCtx.strokeStyle = 'rgba(120,80,50,0.75)';
-            gameCtx.lineWidth = 2;
-            for (let x = -36; x < gameCanvas.width + 36; x += 36) {
-                gameCtx.beginPath();
-                gameCtx.moveTo(x + scroll * 0.5, gameCanvas.height - 55);
-                gameCtx.lineTo(x + scroll * 0.5 - 22, gameCanvas.height);
-                gameCtx.stroke();
-            }
-
-            // distant 16-bit ruins/walls for scroller depth (simple blocks)
-            gameCtx.fillStyle = '#1f1a15';
-            const bgScroll = (Date.now() / 80) % 120;
-            gameCtx.fillRect(bgScroll - 30, gameCanvas.height - 95, 28, 40);
-            gameCtx.fillRect(bgScroll + 70, gameCanvas.height - 88, 22, 33);
-
-            // draw player (Helaphant - high contrast)
-            drawPlayer16bit(gameCtx, gamePlayer);
-
-            // bullets - bright yellow
-            gameCtx.fillStyle = '#ffeb3b';
-            for (const b of gameBullets) gameCtx.fillRect(b.x, b.y, b.w, b.h);
-
-            // enemies (turbaned demons)
-            for (const e of gameEnemies) drawEnemy16bit(gameCtx, e);
-
-            // cookie dough - bright
-            for (const c of gameCookies) drawCookie16bit(gameCtx, c);
-
-            // health bar - always visible 16-bit style
-            const hpRatio = Math.max(0, gamePlayer.health / gamePlayer.maxHealth);
-            gameCtx.fillStyle = '#111';
-            gameCtx.fillRect(8, 6, 114, 9);
-            gameCtx.fillStyle = hpRatio > 0.4 ? '#14b8a6' : '#ff4444';
-            gameCtx.fillRect(8, 6, 114 * hpRatio, 9);
-            gameCtx.strokeStyle = '#fff';
-            gameCtx.lineWidth = 1;
-            gameCtx.strokeRect(8, 6, 114, 9);
-            gameCtx.fillStyle = '#fff';
-            gameCtx.font = '8px monospace';
-            gameCtx.fillText('HP', 126, 13);
-        }
-
-        function gameLoop() {
-            if (!gameActive) return;
-            updateGame();
-            drawGame();
-            requestAnimationFrame(gameLoop);
-        }
-
-        function checkCollision(a, b) {
-            return !(a.x + a.w < b.x || a.x > b.x + b.w || a.y + a.h < b.y || a.y > b.y + b.h);
-        }
 
         function copyDiscountCode(code) { /* uses existing global */ }
         function applyDiscountToCart(code, percent) { /* uses existing global */ }
 
-        function initGame() {
-            setupGame();
-            // load any saved discount with guards
-            let saved = null;
-            try {
-                saved = localStorage.getItem('hel_discount');
-            } catch (e) {
-                console.warn('localStorage read blocked for discount:', e);
-            }
-            if (saved) {
-                try {
-                    const d = JSON.parse(saved);
-                    if (d && d.code && (Date.now() - (d.ts || 0) < 1000*60*60*24)) {
-                        window.currentDiscount = d;
-                    }
-                } catch (e) {
-                    console.warn('Invalid discount in storage:', e);
-                }
-            }
-        }
-
-        // Extra safety: draw preview even if init timing is off
-        setTimeout(() => {
-            const c = document.getElementById('game-canvas');
-            if (c && !window.gameActive) {
-                const ctx = c.getContext('2d');
-                if (ctx) {
-                    ctx.imageSmoothingEnabled = false;
-                    ctx.fillStyle = '#0a0a0a';
-                    ctx.fillRect(0, 0, c.width, c.height);
-                    ctx.fillStyle = '#1a140f';
-                    ctx.fillRect(0, c.height - 55, c.width, 55);
-                    // preview player
-                    const p = { x: 120, y: 170, w: 26, h: 22 };
-                    // inline simple draw for safety
-                    ctx.fillStyle = '#1a1a1a';
-                    ctx.fillRect(p.x + 5, p.y + 16, 5, 7);
-                    ctx.fillRect(p.x + 16, p.y + 16, 5, 7);
-                    ctx.fillStyle = '#1a1a1a';
-                    ctx.fillRect(p.x + 6, p.y + 7, 14, 11);
-                    ctx.fillStyle = '#145a32';
-                    ctx.fillRect(p.x + 7, p.y + 8, 12, 9);
-                    ctx.fillStyle = '#2c3e50';
-                    ctx.fillRect(p.x + 9, p.y + 9, 2, 5);
-                    ctx.fillRect(p.x + 13, p.y + 9, 2, 5);
-                    ctx.fillRect(p.x + 17, p.y + 9, 2, 5);
-                    ctx.fillStyle = '#e8c39e';
-                    ctx.fillRect(p.x + 9, p.y + 2, 9, 7);
-                    ctx.fillStyle = '#f4d03f';
-                    ctx.fillRect(p.x + 8, p.y, 11, 3);
-                    ctx.fillRect(p.x + 8, p.y + 2, 3, 5);
-                    ctx.fillStyle = '#2c3e50';
-                    ctx.fillRect(p.x + 7, p.y - 1, 13, 3);
-                    ctx.fillRect(p.x + 6, p.y + 1, 15, 2);
-                    ctx.fillStyle = '#145a32';
-                    ctx.fillRect(p.x + 9, p.y + 5, 9, 4);
-                    ctx.fillStyle = '#2c3e50';
-                    ctx.fillRect(p.x + 20, p.y + 9, 11, 3);
-                    ctx.fillRect(p.x + 18, p.y + 7, 4, 7);
-                    ctx.fillStyle = '#14b8a6';
-                    ctx.font = '12px monospace';
-                    ctx.fillText('Click START GAME to play', 160, 340);
-                }
-            }
-        }, 800);
-
-        function drawGamePreview() {
-            if (!gameCtx || !gameCanvas) return;
-            gameCtx.fillStyle = '#0a0a0a';
-            gameCtx.fillRect(0, 0, gameCanvas.width, gameCanvas.height);
-
-            // Simple ground
-            gameCtx.fillStyle = '#1a140f';
-            gameCtx.fillRect(0, gameCanvas.height - 55, gameCanvas.width, 55);
-
-            // Preview player (Helaphant) in center-left
-            const previewPlayer = { x: 120, y: 170, w: 26, h: 22 };
-            drawPlayer16bit(gameCtx, previewPlayer);
-
-            // A couple preview enemies on the right
-            drawEnemy16bit(gameCtx, { x: 420, y: 140, w: 20, h: 18 });
-            drawEnemy16bit(gameCtx, { x: 480, y: 220, w: 20, h: 18 });
-
-            // A cookie
-            drawCookie16bit(gameCtx, { x: 300, y: 200, w: 13, h: 9 });
-
-            // Instructions text
-            gameCtx.fillStyle = '#14b8a6';
-            gameCtx.font = '14px monospace';
-            gameCtx.fillText('Click START GAME below', 180, 340);
-            gameCtx.fillStyle = '#f5f0e6';
-            gameCtx.font = '12px monospace';
-            gameCtx.fillText('W/S or Arrows: Move  |  SPACE or Click: Shoot', 130, 360);
-        }
+        // initGame removed - game is now the standalone iframe.
+        // Discount helpers below are kept so codes from the iframe game can be applied.
 
         // (old clicker startGame removed - using 16-bit scroller version)
 
@@ -1868,26 +1301,18 @@
             } catch(e){}
         })();
 
-        // Initialize game when page loads
-        function initGame() {
-            setupGame();
-            // load any saved discount with guards
-            let saved = null;
+        // No canvas game init needed — game is the standalone iframe.
+        // We still load any previously unlocked discount from localStorage.
+        function initDiscount() {
             try {
-                saved = localStorage.getItem('hel_discount');
-            } catch (e) {
-                console.warn('localStorage read blocked for discount:', e);
-            }
-            if (saved) {
-                try {
+                const saved = localStorage.getItem('hel_discount');
+                if (saved) {
                     const d = JSON.parse(saved);
                     if (d && d.code && (Date.now() - (d.ts || 0) < 1000*60*60*24)) {
                         window.currentDiscount = d;
                     }
-                } catch (e) {
-                    console.warn('Invalid discount in storage:', e);
                 }
-            }
+            } catch (e) {}
         }
 
         async function initializeEverything() {
@@ -1895,7 +1320,7 @@
             initNavbar();
             await initProducts();           // Now properly waits for Supabase or fallback
             initMobileMenu();
-            initGame();                     // The Art of War discount game
+            initDiscount();  // loads any HELAART10 / HELAART20 saved from the game
             updateCartCount();
 
             // Easter egg: Konami-ish hint in console
