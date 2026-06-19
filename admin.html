@@ -4,6 +4,7 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Admin • War Helaphant</title>
+    <link rel="icon" href="images/logo.png">
     <script src="https://cdn.tailwindcss.com"></script>
     <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css">
@@ -611,9 +612,14 @@
 
         function getAdminPassword() {
             // IMPORTANT: Change this default password before going live!
-            // The current protection is client-side only.
+            // The current protection is client-side only (basic).
             // For better security later we can add real Supabase user login.
-            return localStorage.getItem('hel_admin_password') || 'helaphant-CHANGE-THIS';
+            const pass = localStorage.getItem('hel_admin_password');
+            // During setup only - will be replaced by your custom password
+            if (!pass || pass === 'helaphant-CHANGE-THIS-NOW') {
+                return 'helaphant';
+            }
+            return pass;
         }
 
         function setAdminPassword(newPass) {
@@ -693,6 +699,13 @@
             document.getElementById('current-password').value = '';
             document.getElementById('new-password').value = '';
             document.getElementById('confirm-password').value = '';
+
+            // Show helper note for first-time setup
+            const note = document.getElementById('set-pass-note');
+            const hasCustom = localStorage.getItem('hel_admin_password') && 
+                              localStorage.getItem('hel_admin_password') !== 'helaphant' &&
+                              localStorage.getItem('hel_admin_password') !== 'helaphant-CHANGE-THIS-NOW';
+            if (note) note.style.display = hasCustom ? 'none' : 'block';
         }
 
         function closeSetPasswordModal() {
@@ -711,8 +724,9 @@
             const confirm = document.getElementById('confirm-password').value;
 
             const correct = getAdminPassword();
+            const hasCustomPassword = localStorage.getItem('hel_admin_password') && localStorage.getItem('hel_admin_password') !== 'helaphant' && localStorage.getItem('hel_admin_password') !== 'helaphant-CHANGE-THIS-NOW';
 
-            if (current !== correct) {
+            if (hasCustomPassword && current !== correct) {
                 alert("Current password is incorrect.");
                 return;
             }
@@ -726,7 +740,7 @@
             }
 
             setAdminPassword(newPass);
-            alert("Password changed successfully!");
+            alert("Password " + (hasCustomPassword ? "changed" : "set") + " successfully!");
 
             closeSetPasswordModal();
             
@@ -829,9 +843,7 @@
                 </div>
             </div>
 
-            <div class="text-center mt-6 text-[11px] text-[#f5f0e6]/40">
-                Default password on first use: <span class="font-mono text-[#14b8a6]">helaphant</span>
-            </div>
+            <!-- Default password hint removed before live deploy -->
         </div>
     </div>
 
@@ -843,6 +855,10 @@
             <div class="flex justify-between items-center mb-6">
                 <div class="font-semibold text-xl">Set New Password</div>
                 <button onclick="closeSetPasswordModal()" class="text-2xl text-[#f5f0e6]/50">×</button>
+            </div>
+
+            <div class="text-[11px] text-[#f5f0e6]/60 mb-4" id="set-pass-note" style="display:none;">
+                First time setup: leave "Current Password" blank and choose your new password.
             </div>
 
             <div class="space-y-5">

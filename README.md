@@ -15,7 +15,7 @@ A beautiful, dark artistic e-commerce site for War Helaphant — hand-painted cl
 
 ## How to Run Locally
 1. Open `index.html` in a browser (double-click).
-2. For admin: Open `admin.html`, use the password (default was "helaphant" — change in code if needed).
+2. For admin: Open `admin.html` and use the password you set (it is stored in your browser only).
 3. To test Supabase changes: Edit products in admin, refresh index.html.
 
 **Note**: For best results (avoid file:// security issues with Supabase), run a local server:
@@ -74,7 +74,7 @@ After pointing, update any links in the site if needed, and set the domain in Su
 Current protection is a simple client-side password (easy to bypass by viewing source).
 
 **Quick improvements**:
-- Change the password in the code (search for `helaphant` in admin.html).
+- Change the password using the "Set or change password" link inside the admin (after logging in).
 - Better: Add Supabase Auth so only you can log in (email + password).
 - Or move admin to a separate protected route (Netlify Identity or password page).
 
@@ -169,7 +169,7 @@ To upload images directly:
 3. **Supabase**:
    - Create "orders" table for history (id, name, email, notes, cart_summary, total, status, created_at).
    - Set Site URL in Supabase to https://helaphant.com.
-4. **Admin**: Change password in admin.html (search helaphant-CHANGE-THIS-NOW).
+4. **Admin**: Log into the admin page, then use the "Set or change password" option to set a strong password. Do this before going live.
 5. **Test**:
    - Browse, cart, submit form (Netlify Forms emails you).
    - Admin: manage products (live on shop).
