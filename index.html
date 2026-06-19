@@ -10,7 +10,7 @@
     <meta property="og:image" content="images/logo.png">
     <link rel="icon" href="images/logo.png">
     <script src="https://cdn.tailwindcss.com"></script>
-    <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+    <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2" onload="window.__supabaseScriptLoaded = true;"></script>
     <script src="https://js.stripe.com/v3/"></script>
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css">
     <style>
@@ -565,20 +565,46 @@
         let supabaseClient = null;
 
         function getSupabaseClient() {
+            if (supabaseClient) return supabaseClient;
+
             try {
-                if (!supabaseClient && typeof supabase !== 'undefined' && window.supabase) {
-                    supabaseClient = window.supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
+                let SupabaseLib = window.supabase;
+                // Some CDN builds expose it under .default
+                if (!SupabaseLib && window.supabase && window.supabase.default) {
+                    SupabaseLib = window.supabase.default;
+                }
+
+                if (SupabaseLib && typeof SupabaseLib.createClient === 'function') {
+                    supabaseClient = SupabaseLib.createClient(SUPABASE_URL, SUPABASE_KEY);
+                    console.log('%c[Supabase] Client created successfully', 'color:#14b8a6');
+                    return supabaseClient;
                 }
             } catch (e) {
                 console.error("Supabase initialization failed:", e);
             }
+
+            // If script not loaded yet, retry once
+            if (!window.__supabaseScriptLoaded) {
+                setTimeout(() => {
+                    if (!supabaseClient) getSupabaseClient();
+                }, 300);
+            }
+
+            if (!supabaseClient) {
+                console.warn("Supabase library not yet available on window. Retrying...");
+            }
             return supabaseClient;
         }
+
+        // Ensure client is attempted early
+        setTimeout(() => {
+            getSupabaseClient();
+        }, 50);
 
         // === GAME LEADERBOARD (Supabase) ===
         /*
           Supabase table needed (run in SQL editor):
-          create table game_scores (
+          create table if not exists game_scores (
             id uuid default gen_random_uuid() primary key,
             player_name text not null,
             score int not null,
@@ -586,29 +612,52 @@
             created_at timestamptz default now()
           );
           alter table game_scores enable row level security;
-          create policy "public read" on game_scores for select using (true);
-          create policy "public insert" on game_scores for insert with check (true);
+          create policy "public can read scores" on game_scores for select to anon using (true);
+          create policy "public can insert scores" on game_scores for insert to anon with check (true);
         */
         async function submitGameScore(playerName, score, wavesCleared) {
             const client = getSupabaseClient();
-            if (!client) return;
+            const container = document.getElementById('leaderboard');
+            console.log('[Leaderboard] submitGameScore called with:', {playerName, score, wavesCleared});
+            if (!client) {
+                console.error('[Leaderboard] No Supabase client available');
+                if (container) container.innerHTML = '<p class="text-xs text-red-400/70 text-center py-1">Supabase client not ready</p>';
+                return;
+            }
             try {
-                await client.from('game_scores').insert([{
+                const { data, error } = await client.from('game_scores').insert([{
                     player_name: playerName || 'Anonymous',
                     score: score,
                     waves_cleared: wavesCleared
-                }]);
-                console.log('%c[Leaderboard] Score submitted', 'color:#14b8a6');
-                loadLeaderboard();
+                }]).select();
+                if (error) throw error;
+                console.log('%c[Leaderboard] Score submitted successfully. Returned:', 'color:#14b8a6', data);
+                if (container) {
+                    container.innerHTML = '<p class="text-xs text-[#14b8a6] text-center py-2">Score submitted! Refreshing board...</p>';
+                    setTimeout(() => loadLeaderboard(), 600);
+                } else {
+                    loadLeaderboard();
+                }
             } catch (e) {
                 console.error('Leaderboard submit failed:', e);
+                if (container) {
+                    container.innerHTML = `<p class="text-xs text-red-400/70 text-center py-1">Submit failed: ${e.message || 'Check console / table setup'}</p>`;
+                    setTimeout(() => loadLeaderboard(), 2500);
+                }
             }
         }
 
         async function loadLeaderboard() {
-            const client = getSupabaseClient();
+            let client = getSupabaseClient();
             const container = document.getElementById('leaderboard');
-            if (!client || !container) return;
+            if (!client || !container) {
+                // Retry once if client not ready
+                setTimeout(() => {
+                    client = getSupabaseClient();
+                    if (client && container) loadLeaderboard();
+                }, 400);
+                return;
+            }
             try {
                 const { data, error } = await client
                     .from('game_scores')
@@ -635,11 +684,15 @@
 
         // Listen for scores from the game iframe
         window.addEventListener('message', (event) => {
+            console.log('[Leaderboard] Received postMessage from iframe. Origin:', event.origin, 'Data:', event.data);
             if (event.data && event.data.type === 'gameScore') {
                 const { playerName, score, wavesCleared } = event.data;
                 submitGameScore(playerName, score, wavesCleared);
             }
         });
+
+        // Also expose a manual test in console: window.testLeaderboard()
+        window.testLeaderboard = () => submitGameScore('TestUser', 1234, 5);
 
         // ============================================
         // Tailwind config
@@ -1398,7 +1451,17 @@
             await initProducts();           // Now properly waits for Supabase or fallback
             initMobileMenu();
             initDiscount();  // loads any discount codes saved from the game
-            loadLeaderboard();  // top game scores (requires game_scores table in Supabase)
+            // Ensure Supabase client is ready before loading leaderboard
+            setTimeout(() => {
+                const client = getSupabaseClient();
+                if (client) {
+                    loadLeaderboard();
+                } else {
+                    console.warn('Supabase client not available for leaderboard');
+                    const container = document.getElementById('leaderboard');
+                    if (container) container.innerHTML = '<p class="text-xs text-[#f5f0e6]/50 py-1">Leaderboard unavailable (Supabase not loaded)</p>';
+                }
+            }, 200);
             updateCartCount();
 
             // Easter egg: Konami-ish hint in console

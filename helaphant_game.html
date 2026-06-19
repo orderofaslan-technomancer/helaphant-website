@@ -369,7 +369,7 @@
       <div style="margin:10px 0 4px; text-align:center; font-size:11px; color:#aaa;">
         <input id="playerName" value="Anonymous" placeholder="Your name" 
                style="width:52%; padding:2px 5px; font-size:10px; background:#1a1a1a; color:#ddd; border:1px solid #333; border-radius:2px;">
-        <button onclick="submitToLeaderboard()" 
+        <button id="submitScoreBtn" 
                 style="font-size:9px; padding:2px 6px; background:#14b8a6; color:#000; border:none; border-radius:2px; cursor:pointer; margin-left:3px;">Submit</button>
       </div>
 
@@ -1162,11 +1162,15 @@ document.getElementById('visitBtn').addEventListener('click', ()=>{
 });
 
 // === LEADERBOARD ===
+document.getElementById('submitScoreBtn').addEventListener('click', submitToLeaderboard);
+
+// === LEADERBOARD ===
 function submitToLeaderboard() {
   const nameInput = document.getElementById('playerName');
   const name = (nameInput && nameInput.value.trim()) || 'Anonymous';
   const wavesCleared = Math.max(0, (typeof wave !== 'undefined' ? wave - 1 : 0));
   
+  console.log('[Game] submitToLeaderboard called with:', { name, score, wavesCleared });
   if (window.parent && window.parent !== window) {
     window.parent.postMessage({
       type: 'gameScore',
