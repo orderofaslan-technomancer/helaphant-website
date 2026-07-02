@@ -167,7 +167,9 @@ To upload images directly:
    - Netlify redeploys. "PAY WITH CARD (STRIPE)" will now create real Checkout sessions.
    - Test card: 4242 4242 4242 4242 (any future date / any CVC). This is test mode only.
 3. **Supabase**:
-   - Create "orders" table for history (id, name, email, notes, cart_summary, total, status, created_at).
+   - Create "orders" table for history (id, name, email, notes, cart_summary, total, status, created_at) if desired.
+   - Create "game_scores" table for the leaderboard (see the detailed SQL in index.html comments).
+   - Ensure Row Level Security policies allow anonymous read/insert for public leaderboard and products.
    - Set Site URL in Supabase to https://helaphant.com.
 4. **Admin**: Log into the admin page, then use the "Set or change password" option to set a strong password. Do this before going live.
 5. **Test**:
