@@ -272,10 +272,12 @@
 
         <div class="mt-16 max-w-3xl">
             <p class="text-xl leading-tight text-[#f5f0e6]/90">
-                The Helaphant is the woman who holds both the savage and the sacred. 
-                She protects fiercely, loves deeply, and refuses to apologize for her power.
+                The Helaphant is the woman who holds the savage and the sacred in the same hands.
             </p>
-            <div class="mt-6 text-sm text-[#f5f0e6]/60">— This is for the women who were told they were too much.</div>
+            <p class="mt-3 text-xl leading-tight text-[#f5f0e6]/90">
+                She creates and protects with the same intensity.
+            </p>
+            <div class="mt-6 text-sm text-[#f5f0e6]/60">— Waging war through art.</div>
         </div>
     </section>
 
@@ -422,14 +424,17 @@
         </div>
     </section>
 
-    <!-- Les be Frens -->
+    <!-- Join the Circle -->
     <section id="contact" class="max-w-3xl mx-auto px-8 py-20 text-center border-b border-white/10">
         <div class="mx-auto max-w-md">
             <div class="hel-text text-[#0f766e] tracking-[3.5px]">STAY IN THE CIRCLE</div>
-            <h3 class="heading-serif text-5xl mt-3 tracking-[-1.5px]">Les be Frens</h3>
+            <h3 class="heading-serif text-5xl mt-3 tracking-[-1.5px]">JOIN THE CIRCLE</h3>
             <p class="mt-4 text-[#f5f0e6]/70">I won't spam you. Just the occasional email when something actually matters.</p>
 
-            <form name="newsletter" method="POST" data-netlify="true" class="mt-8">
+            <form name="newsletter" method="POST" data-netlify="true" onsubmit="subscribeNewsletter(event)" class="mt-8">
+                <input type="hidden" name="form-name" value="newsletter" />
+                <!-- Honeypot for spam bots (Netlify) -->
+                <input type="text" name="bot-field" class="hidden" tabindex="-1" autocomplete="off" />
                 <div class="flex">
                     <input type="email" name="email" placeholder="your@email.com" required
                            class="flex-1 bg-[#111] border border-white/15 focus:border-[#14b8a6] outline-none px-5 py-3.5 rounded-l-2xl text-sm placeholder:text-[#f5f0e6]/40">
@@ -447,9 +452,12 @@
     <footer class="max-w-7xl mx-auto px-8 py-12 text-xs text-[#f5f0e6]/50">
         <div class="flex flex-col md:flex-row gap-y-4 items-center justify-between">
             <div>© WAR HELAPHANT. All rights fiercely protected.</div>
-            <div class="flex gap-x-6">
+            <div class="flex gap-x-6 items-center">
+                <a href="https://x.com/warhelaphant" target="_blank" rel="noopener" class="hover:text-[#f5f0e6] inline-flex items-center gap-x-1.5">
+                    <i class="fa-brands fa-x-twitter"></i>
+                    <span>@warhelaphant</span>
+                </a>
                 <a href="#" class="hover:text-[#f5f0e6]">Instagram</a>
-                <a href="#" class="hover:text-[#f5f0e6]">TikTok</a>
                 <a href="#" class="hover:text-[#f5f0e6]">DM on Instagram</a>
             </div>
             <div>
@@ -522,6 +530,10 @@
             </div>
 
             <form name="order" method="POST" data-netlify="true" class="p-8 border-t border-white/10" onsubmit="handleOrderSubmit(event)">
+                <input type="hidden" name="form-name" value="order" />
+                <!-- Honeypot for spam bots (Netlify) -->
+                <input type="text" name="bot-field" class="hidden" tabindex="-1" autocomplete="off" />
+
                 <div class="space-y-3 mb-6">
                     <input type="text" name="name" placeholder="Your name" required 
                            class="w-full bg-[#0a0a0a] border border-white/15 rounded-2xl px-4 py-2 text-sm placeholder:text-[#f5f0e6]/40">
@@ -1147,6 +1159,31 @@
             renderCartItems();
         }
 
+        // Order / Checkout form - now properly submits to Netlify Forms
+        /*
+          ORDER FORM SETUP (Netlify + Supabase):
+
+          1. Netlify Forms will automatically capture "order" submissions after deploy.
+             Submissions appear under Forms in Netlify dashboard.
+             Set up email notifications there (same as newsletter).
+
+          2. Recommended: Create this table in Supabase for persistent order records:
+             create table if not exists orders (
+               id uuid default gen_random_uuid() primary key,
+               name text,
+               email text not null,
+               notes text,
+               cart_summary text,
+               total numeric,
+               status text default 'new',
+               created_at timestamptz default now()
+             );
+             alter table orders enable row level security;
+             create policy "public can insert orders" on orders 
+               for insert to anon with check (true);
+
+          3. After orders come in, you can view them in Supabase Table Editor or in the Netlify Forms dashboard.
+        */
         async function handleOrderSubmit(e) {
             e.preventDefault();
 
@@ -1154,45 +1191,102 @@
             const total = cart.reduce((sum, item) => sum + item.price * item.quantity, 0);
             const formData = new FormData(form);
 
-            // 1. Submit to Netlify Forms (on deploy this emails you automatically)
-            // The form submit will be handled by Netlify when deployed.
-            // For local, we just log.
+            // Honeypot check
+            const honeypot = form.querySelector('input[name="bot-field"]');
+            if (honeypot && honeypot.value) {
+                console.warn('Honeypot triggered on order form — possible spam');
+                return;
+            }
+
+            const submitBtn = form.querySelector('button[type="submit"]');
+            const originalBtnText = submitBtn ? submitBtn.innerHTML : 'SUBMIT';
+            if (submitBtn) {
+                submitBtn.innerHTML = 'SUBMITTING...';
+                submitBtn.disabled = true;
+            }
 
             console.log('Order form data:', Object.fromEntries(formData));
 
-            // 2. Also save to Supabase 'orders' table for admin visibility (create the table in Supabase if not exists)
-            const client = getSupabaseClient();
-            if (client) {
-                try {
-                    const orderData = {
-                        name: formData.get('name'),
-                        email: formData.get('email'),
-                        notes: formData.get('notes') || '',
-                        cart_summary: formData.get('cart'),
-                        total: total,
-                        status: 'new'
-                    };
-                    const { error } = await client.from('orders').insert([orderData]);
-                    if (error) {
-                        console.warn('Could not save order to Supabase (create "orders" table if needed):', error);
-                    } else {
-                        console.log('Order also saved to Supabase.');
-                    }
-                } catch (err) {
-                    console.warn('Supabase order save failed:', err);
+            try {
+                // 1. Submit to Netlify Forms (the real email capture on deploy)
+                const response = await fetch("/", {
+                    method: "POST",
+                    headers: { "Content-Type": "application/x-www-form-urlencoded" },
+                    body: new URLSearchParams(formData).toString()
+                });
+
+                if (!response.ok) {
+                    throw new Error('Netlify order form submission failed');
                 }
+
+                // 2. Also save to Supabase 'orders' table (for your own admin visibility)
+                const client = getSupabaseClient();
+                if (client) {
+                    try {
+                        const orderData = {
+                            name: formData.get('name'),
+                            email: formData.get('email'),
+                            notes: formData.get('notes') || '',
+                            cart_summary: formData.get('cart'),
+                            total: total,
+                            status: 'new'
+                        };
+                        const { error } = await client.from('orders').insert([orderData]);
+                        if (error) {
+                            console.warn('Could not save order to Supabase (create "orders" table if needed):', error);
+                        } else {
+                            console.log('Order also saved to Supabase.');
+                        }
+                    } catch (err) {
+                        console.warn('Supabase order save failed (non-critical):', err);
+                    }
+                }
+
+                // Success UI
+                if (submitBtn) submitBtn.innerHTML = 'ORDER RECEIVED ✓';
+
+                // Clear cart and close
+                cart = [];
+                updateCartCount();
+                closeCart();
+
+                setTimeout(() => {
+                    const successMsg = document.createElement('div');
+                    successMsg.className = 'fixed bottom-8 left-1/2 -translate-x-1/2 bg-[#111] border border-white/10 px-6 py-4 rounded-2xl text-sm shadow-2xl z-[90] max-w-sm text-center';
+                    successMsg.innerHTML = `
+                        <div class="font-medium text-[#14b8a6]">Order received!</div>
+                        <div class="text-[#f5f0e6]/70 mt-1 text-xs">We'll email you shortly to confirm and arrange payment.</div>
+                    `;
+                    document.body.appendChild(successMsg);
+
+                    setTimeout(() => {
+                        if (successMsg.parentElement) successMsg.parentElement.removeChild(successMsg);
+                    }, 5500);
+
+                    form.reset();
+                    if (submitBtn) {
+                        submitBtn.innerHTML = originalBtnText;
+                        submitBtn.disabled = false;
+                    }
+                }, 400);
+
+            } catch (err) {
+                console.error('Order submission error:', err);
+
+                // Fallback for local / offline
+                cart = [];
+                updateCartCount();
+                closeCart();
+
+                setTimeout(() => {
+                    alert(`Thank you! Order received (demo mode).\n\nName: ${formData.get('name')}\nWe'll email you to confirm details.`);
+                    form.reset();
+                    if (submitBtn) {
+                        submitBtn.innerHTML = originalBtnText;
+                        submitBtn.disabled = false;
+                    }
+                }, 300);
             }
-
-            // Clear UI
-            cart = [];
-            updateCartCount();
-            closeCart();
-
-            // Success - Netlify will handle thank you / email on live
-            setTimeout(() => {
-                alert(`Thank you! Order submitted.\n\nWe'll email you shortly to confirm and arrange payment.`);
-                form.reset();
-            }, 300);
         }
 
         async function initiateStripeCheckout() {
@@ -1267,36 +1361,133 @@
             }
         }
 
-        // Newsletter handled by Netlify Forms on deploy.
-        // This provides nice local feedback only.
-        function subscribeNewsletter(e) {
-            // If the form has data-netlify, let it submit normally on deploy.
-            // For local/dev we intercept for UX.
-            if (!window.location.hostname.includes('localhost') && !window.location.hostname.includes('127.0.0.1')) {
-                return; // let Netlify handle it
-            }
+        // Newsletter / Email list signup - functional on Netlify + nice local/dev feedback
+        /*
+          TO MAKE THE EMAIL LIST FULLY FUNCTIONAL:
 
+          1. Netlify Forms (primary):
+             - Deploy the site to Netlify.
+             - After first deploy, the "newsletter" form will appear at:
+               Netlify Dashboard → Your site → Forms
+             - Click the form → "Set up notifications" → Add your email address.
+             - New signups will email you and be visible/exportable in the dashboard.
+
+          2. Optional: Store in Supabase too (for your own list):
+             Run this once in Supabase SQL Editor:
+             create table if not exists subscribers (
+               id uuid default gen_random_uuid() primary key,
+               email text not null unique,
+               source text,
+               created_at timestamptz default now()
+             );
+             alter table subscribers enable row level security;
+             -- Only allow inserts from the site (adjust if you add auth later)
+             create policy "public can insert subscribers" on subscribers 
+               for insert to anon with check (true);
+
+          3. Test:
+             - Use `netlify dev` locally for better form simulation.
+             - On live: submit an email, check your inbox + Netlify Forms tab.
+        */
+        async function subscribeNewsletter(e) {
             e.preventDefault();
+
             const form = e.target;
             const emailInput = form.querySelector('input[type="email"]');
+            const honeypot = form.querySelector('input[name="bot-field"]');
             const email = emailInput ? emailInput.value.trim() : '';
 
-            if (!email) {
-                alert("Please enter your email.");
+            // Honeypot check - if filled, it's a bot
+            if (honeypot && honeypot.value) {
+                console.warn('Honeypot triggered — possible spam');
+                return;
+            }
+
+            if (!email || !email.includes('@')) {
+                alert("Please enter a valid email address.");
                 return;
             }
 
             const btn = form.querySelector('button');
             const originalText = btn.innerHTML;
-            btn.innerHTML = 'THANKS, FREN';
+            btn.innerHTML = 'JOINING...';
             btn.disabled = true;
 
-            setTimeout(() => {
-                alert(`Thank you. ${email} has been added to the circle.`);
+            try {
+                // Submit to Netlify Forms (works on live deploy)
+                const formData = new FormData(form);
+                const response = await fetch("/", {
+                    method: "POST",
+                    headers: { "Content-Type": "application/x-www-form-urlencoded" },
+                    body: new URLSearchParams(formData).toString()
+                });
+
+                if (!response.ok) {
+                    throw new Error('Netlify form submission failed');
+                }
+
+                // Optional: also save to Supabase 'subscribers' table if it exists
+                const client = getSupabaseClient();
+                if (client) {
+                    try {
+                        await client.from('subscribers').insert([{
+                            email: email,
+                            source: 'website-join-circle',
+                            created_at: new Date().toISOString()
+                        }]);
+                    } catch (dbErr) {
+                        // Table may not exist yet — that's okay for now
+                        console.log('[Newsletter] Supabase subscribers table not found or insert failed (non-critical):', dbErr.message);
+                    }
+                }
+
+                // Success UX
+                btn.innerHTML = 'JOINED ✓';
                 emailInput.value = '';
-                btn.innerHTML = originalText;
-                btn.disabled = false;
-            }, 850);
+
+                setTimeout(() => {
+                    const parent = form.parentElement;
+                    form.style.display = 'none';
+
+                    const successMsg = document.createElement('div');
+                    successMsg.className = 'text-[#14b8a6] text-sm mt-1';
+                    successMsg.innerHTML = `You're in. <span class="text-[#f5f0e6]/60">We'll email you when it matters.</span>`;
+                    parent.appendChild(successMsg);
+
+                    // Optional: allow re-subscribing after some time (for testing)
+                    setTimeout(() => {
+                        if (successMsg.parentElement) successMsg.parentElement.removeChild(successMsg);
+                        form.style.display = '';
+                        btn.innerHTML = originalText;
+                        btn.disabled = false;
+                    }, 8000);
+                }, 500);
+
+            } catch (err) {
+                console.error('Newsletter signup error:', err);
+
+                // Fallback for local development or if fetch fails
+                btn.innerHTML = 'JOINED ✓';
+                emailInput.value = '';
+
+                setTimeout(() => {
+                    alert(`Thanks! ${email} added to the circle (demo mode).`);
+                    const parent = form.parentElement;
+                    form.style.display = 'none';
+
+                    const successMsg = document.createElement('div');
+                    successMsg.className = 'text-[#14b8a6] text-sm mt-1';
+                    successMsg.innerHTML = `You're in. <span class="text-[#f5f0e6]/60">We'll email you when it matters.</span>`;
+                    parent.appendChild(successMsg);
+
+                    setTimeout(() => {
+                        if (successMsg.parentElement) successMsg.parentElement.removeChild(successMsg);
+                        form.style.display = '';
+                        btn.innerHTML = originalText;
+                        btn.disabled = false;
+                    }, 6000);
+                }, 300);
+            }
         }
 
         function showWarRoomModal() {
