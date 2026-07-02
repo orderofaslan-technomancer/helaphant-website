@@ -1137,6 +1137,17 @@ function endGame(won){
       <div style="font-size:12px;color:#7d8270; margin-top:8px;">No discount earned this run. Clear more waves to unlock launch codes.</div>
     `;
   }
+
+  // Save discount to localStorage so main site cart can apply it (same origin)
+  if (wavesCleared >= WAVE_FOR_COUPON_10) {
+    const code = wavesCleared >= WAVE_FOR_COUPON_20 ? COUPON_CODE_20 : COUPON_CODE_10;
+    const percent = wavesCleared >= WAVE_FOR_COUPON_20 ? 20 : 10;
+    try {
+      localStorage.setItem('hel_discount', JSON.stringify({ code, percent, ts: Date.now() }));
+    } catch (e) {
+      console.warn('Could not save discount to localStorage');
+    }
+  }
 }
 
 function bindCouponCopy(code){

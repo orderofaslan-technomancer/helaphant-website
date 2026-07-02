@@ -317,6 +317,9 @@
           <div id="leaderboard" class="max-w-[420px] mx-auto text-xs bg-[#0a0a0a]/80 border border-white/10 rounded-xl p-3 overflow-hidden">
             <p class="text-center text-[#f5f0e6]/50 text-xs">Loading top scores...</p>
           </div>
+          <div class="text-center mt-1">
+            <button onclick="loadLeaderboard()" class="text-[10px] text-[#14b8a6] hover:underline">Refresh leaderboard</button>
+          </div>
           <p class="text-[10px] text-center text-[#f5f0e6]/40 mt-1">Top scores from the Zombie Sketch. Submit your score from inside the game!</p>
         </div>
     </section>
@@ -603,7 +606,8 @@
 
         // === GAME LEADERBOARD (Supabase) ===
         /*
-          Supabase table needed (run in SQL editor):
+          REQUIRED SETUP (run once in Supabase SQL editor):
+          1. Create the table:
           create table if not exists game_scores (
             id uuid default gen_random_uuid() primary key,
             player_name text not null,
@@ -611,9 +615,13 @@
             waves_cleared int,
             created_at timestamptz default now()
           );
+
+          2. Enable RLS and public policies (so the static site can read/write anonymously):
           alter table game_scores enable row level security;
           create policy "public can read scores" on game_scores for select to anon using (true);
           create policy "public can insert scores" on game_scores for insert to anon with check (true);
+
+          After creating, scores submitted from the game will appear here.
         */
         async function submitGameScore(playerName, score, wavesCleared) {
             const client = getSupabaseClient();
@@ -688,6 +696,8 @@
             if (event.data && event.data.type === 'gameScore') {
                 const { playerName, score, wavesCleared } = event.data;
                 submitGameScore(playerName, score, wavesCleared);
+                // Reload discount in case game just saved one to localStorage
+                initDiscount();
             }
         });
 
@@ -1373,26 +1383,16 @@
 
 
 
-        function copyDiscountCode(code) { /* uses existing global */ }
-        function applyDiscountToCart(code, percent) { /* uses existing global */ }
-
-        // initGame removed - game is now the standalone iframe.
-        // Discount helpers below are kept so codes from the iframe game can be applied.
-
-        // (old clicker startGame removed - using 16-bit scroller version)
-
-        // (old clicker endGame removed)
-
-        // Old clicker functions removed to prevent override of scroller game.
-
-        // Removed old conflicting clicker game code. Scroller is the active implementation.
-
-        // Discount helper functions (used by game)
+        // Discount helper functions (used by the game)
         function copyDiscountCode(code) {
             navigator.clipboard.writeText(code).then(() => {
-                const orig = event.target.innerText;
-                event.target.innerText = 'Copied!';
-                setTimeout(() => { if (event.target) event.target.innerText = orig; }, 1400);
+                // Try to update a visible element if this was called from a button
+                const activeEl = document.activeElement;
+                if (activeEl && activeEl.textContent) {
+                    const orig = activeEl.textContent;
+                    activeEl.textContent = 'Copied!';
+                    setTimeout(() => { if (activeEl) activeEl.textContent = orig; }, 1400);
+                }
             }).catch(() => {
                 prompt('Copy this code:', code);
             });
@@ -1410,29 +1410,7 @@
             }
         }
 
-        // Discount state is already handled inside the main renderCartItems function above.
-        // The game just sets window.currentDiscount and calls renderCartItems() when needed.
-
-        // Load any previous discount from this session
-        (function loadSavedDiscount() {
-            try {
-                let saved = null;
-                try {
-                    saved = localStorage.getItem('hel_discount');
-                } catch (e) {
-                    console.warn('localStorage read blocked:', e);
-                }
-                if (saved) {
-                    const d = JSON.parse(saved);
-                    if (d && d.code && (Date.now() - (d.ts || 0) < 1000*60*60*24)) {
-                        window.currentDiscount = d;
-                    }
-                }
-            } catch(e){}
-        })();
-
-        // No canvas game init needed — game is the standalone iframe.
-        // We still load any previously unlocked discount from localStorage.
+        // Load any previous discount from the game (saved to localStorage when earning a code)
         function initDiscount() {
             try {
                 const saved = localStorage.getItem('hel_discount');
