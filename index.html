@@ -431,7 +431,7 @@
             <h3 class="heading-serif text-5xl mt-3 tracking-[-1.5px]">JOIN THE CIRCLE</h3>
             <p class="mt-4 text-[#f5f0e6]/70">I won't spam you. Just the occasional email when something actually matters.</p>
 
-            <form name="newsletter" method="POST" data-netlify="true" onsubmit="subscribeNewsletter(event)" class="mt-8">
+            <form name="newsletter" method="POST" data-netlify="true" netlify onsubmit="subscribeNewsletter(event)" class="mt-8">
                 <input type="hidden" name="form-name" value="newsletter" />
                 <!-- Honeypot for spam bots (Netlify) -->
                 <input type="text" name="bot-field" class="hidden" tabindex="-1" autocomplete="off" />
@@ -529,7 +529,7 @@
                 <!-- Populated by JS -->
             </div>
 
-            <form name="order" method="POST" data-netlify="true" class="p-8 border-t border-white/10" onsubmit="handleOrderSubmit(event)">
+            <form name="order" method="POST" data-netlify="true" netlify class="p-8 border-t border-white/10" onsubmit="handleOrderSubmit(event)">
                 <input type="hidden" name="form-name" value="order" />
                 <!-- Honeypot for spam bots (Netlify) -->
                 <input type="text" name="bot-field" class="hidden" tabindex="-1" autocomplete="off" />
