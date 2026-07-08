@@ -165,7 +165,6 @@
                 <div class="hidden md:flex items-center gap-x-10 text-sm font-medium">
                     <a href="#shop" class="nav-link text-[#f5f0e6]/90 hover:text-[#f5f0e6]">Shop</a>
                     <a href="#about" class="nav-link text-[#f5f0e6]/90 hover:text-[#f5f0e6]">The Story</a>
-                    <a href="#war-room" class="nav-link text-[#f5f0e6]/90 hover:text-[#f5f0e6]">War Room</a>
                     <a href="#game" class="nav-link text-[#f5f0e6]/90 hover:text-[#f5f0e6]">The Game</a>
                     <a href="#contact" class="nav-link text-[#f5f0e6]/90 hover:text-[#f5f0e6]">Contact</a>
                 </div>
@@ -197,7 +196,6 @@
         <div class="px-8 py-8 flex flex-col gap-y-6 text-lg font-medium">
             <a href="#shop" onclick="toggleMobileMenu()" class="py-2">Shop</a>
             <a href="#about" onclick="toggleMobileMenu()" class="py-2">The Story</a>
-            <a href="#war-room" onclick="toggleMobileMenu()" class="py-2">War Room</a>
             <a href="#game" onclick="toggleMobileMenu()" class="py-2">The Game</a>
             <a href="#contact" onclick="toggleMobileMenu()" class="py-2">Contact</a>
             <div class="pt-6 border-t border-white/10">
@@ -385,45 +383,6 @@
         </div>
     </section>
 
-    <!-- War Room -->
-    <section id="war-room" class="border-t border-white/10 bg-[#111111]">
-        <div class="max-w-6xl mx-auto px-8 py-20">
-            <div class="flex flex-col lg:flex-row gap-16 items-center">
-                <div class="lg:w-5/12">
-                    <div class="hel-text tracking-[3px] text-[#0f766e]">COMMUNITY</div>
-                    <h3 class="heading-serif text-6xl tracking-[-2.5px] leading-none mt-2">The War Room</h3>
-                    <p class="mt-6 text-lg text-[#f5f0e6]/80">
-                        A space for collabs, hosted artists, and fellow savages. 
-                        Most links go to my frens' own sites. Some I host right here.
-                    </p>
-                    <button onclick="showWarRoomModal()" 
-                            class="mt-8 px-7 py-3.5 bg-white/5 hover:bg-white/10 border border-white/10 rounded-2xl text-sm font-medium transition-colors">
-                        Explore the War Room
-                    </button>
-                </div>
-
-                <div class="lg:w-7/12 grid grid-cols-2 gap-4 text-sm">
-                    <div class="surface border border-white/10 rounded-3xl p-6">
-                        <div class="font-medium">Valkyrie Collective</div>
-                        <div class="text-[#f5f0e6]/60 text-sm mt-1">Patch + apparel collabs</div>
-                    </div>
-                    <div class="surface border border-white/10 rounded-3xl p-6">
-                        <div class="font-medium">Bone &amp; Thorn</div>
-                        <div class="text-[#f5f0e6]/60 text-sm mt-1">Zine &amp; print exchange</div>
-                    </div>
-                    <div class="surface border border-white/10 rounded-3xl p-6">
-                        <div class="font-medium">The Unholy Choir</div>
-                        <div class="text-[#f5f0e6]/60 text-sm mt-1">Music &amp; visual ritual</div>
-                    </div>
-                    <div class="surface border border-white/10 rounded-3xl p-6">
-                        <div class="font-medium">Open Call</div>
-                        <div class="text-[#f5f0e6]/60 text-sm mt-1">DM for hosting or collab</div>
-                    </div>
-                </div>
-            </div>
-        </div>
-    </section>
-
     <!-- Join the Circle -->
     <section id="contact" class="max-w-3xl mx-auto px-8 py-20 text-center border-b border-white/10">
         <div class="mx-auto max-w-md">
@@ -457,8 +416,12 @@
                     <i class="fa-brands fa-x-twitter"></i>
                     <span>@warhelaphant</span>
                 </a>
-                <a href="#" class="hover:text-[#f5f0e6]">Instagram</a>
-                <a href="#" class="hover:text-[#f5f0e6]">DM on Instagram</a>
+                <a href="https://www.instagram.com/warhelaphant?utm_source=ig_web_button_share_sheet&igsh=ZDNlZDc0MzIxNw=="
+                   target="_blank" rel="noopener"
+                   class="hover:text-[#f5f0e6] inline-flex items-center gap-x-1.5">
+                    <i class="fa-brands fa-instagram"></i>
+                    <span>Instagram</span>
+                </a>
             </div>
             <div>
                 <a href="admin.html" target="_blank" class="text-[#14b8a6]/70 hover:text-[#14b8a6] underline">Admin Panel</a>
@@ -1554,44 +1517,6 @@
                     }, 6000);
                 }, 300);
             }
-        }
-
-        function showWarRoomModal() {
-            const modal = document.createElement('div');
-            modal.className = `fixed inset-0 bg-black/90 z-[70] flex items-center justify-center p-4`;
-            modal.innerHTML = `
-                <div onclick="event.target.remove()" class="absolute inset-0"></div>
-                <div onclick="event.stopImmediatePropagation()" class="modal relative surface border border-white/10 max-w-lg w-full rounded-3xl p-8">
-                    <div class="flex justify-between">
-                        <div>
-                            <div class="hel-text text-[#0f766e]">WAR ROOM</div>
-                            <div class="text-4xl font-semibold tracking-tight mt-1">Friends &amp; Collabs</div>
-                        </div>
-                        <button onclick="this.closest('.fixed').remove()" class="text-3xl text-white/40">×</button>
-                    </div>
-                    
-                    <div class="mt-8 space-y-5 text-sm">
-                        <div class="border-l-2 border-[#0f766e] pl-5">
-                            <div class="font-medium">Valkyrie Collective</div>
-                            <div class="text-[#f5f0e6]/60">Patch series and ritual wear. Currently open for submissions.</div>
-                        </div>
-                        <div class="border-l-2 border-[#0f766e] pl-5">
-                            <div class="font-medium">Bone &amp; Thorn Zines</div>
-                            <div class="text-[#f5f0e6]/60">Quarterly artist zine exchange. Issue 04 accepting work.</div>
-                        </div>
-                        <div class="border-l-2 border-[#0f766e] pl-5">
-                            <div class="font-medium">Open Hosting</div>
-                            <div class="text-[#f5f0e6]/60">Want me to carry your work or collaborate on a drop? Reach out.</div>
-                        </div>
-                    </div>
-                    
-                    <a href="https://instagram.com" target="_blank" 
-                       class="mt-8 block w-full text-center py-3 border border-white/15 hover:bg-white/5 rounded-2xl text-sm">
-                        DM ME ON INSTAGRAM
-                    </a>
-                </div>
-            `;
-            document.body.appendChild(modal);
         }
 
         async function initProducts() {
