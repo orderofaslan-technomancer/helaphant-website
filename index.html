@@ -575,9 +575,9 @@
         const SUPABASE_URL = 'https://hxisuvcyfmsotiavhiav.supabase.co';
         const SUPABASE_KEY = 'sb_publishable_B8Dn3MXwiA8W5N-SnNBw_A_F9Xoi3PN';
         
-        // Stripe publishable key (test mode). Secret key lives ONLY in Netlify env var STRIPE_SECRET_KEY.
+        // Stripe publishable key (LIVE). Secret key lives ONLY in Netlify env var STRIPE_SECRET_KEY (must be sk_live_... to match).
         // Netlify function: netlify/functions/create-stripe-checkout.js
-        const STRIPE_PUBLISHABLE_KEY = 'pk_test_51Tj6a4PbFiMbYnYc146mcSjU1XKuHogW2cLfgl3LXgfizBXDkB6DcV1oXxlt5U84KD76h1y7VpxvfXjigQR0YNGq00YvFYiigOROVNGgg0YhAvGnDi';
+        const STRIPE_PUBLISHABLE_KEY = 'pk_live_51Tj6a4PbFiMbYnYc4WaQsBYX57pGTGnHZl8FsJOj25a2I2QRDoUX05qgaQN62N3ScRR5RFotUI2knWTG0W4X17jG00L6Cs5Snf';
         
         let supabaseClient = null;
 
