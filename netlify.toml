@@ -1,10 +1,17 @@
 [build]
   publish = "."
-  # No build command needed - pure static HTML/JS
+  # Install Stripe SDK so the checkout function can run
+  command = "npm install"
+  functions = "netlify/functions"
+
+[functions]
+  node_bundler = "esbuild"
+  directory = "netlify/functions"
 
 [dev]
   publish = "."
   port = 8888
+  functions = "netlify/functions"
 
 [[headers]]
   for = "/*"

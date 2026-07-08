@@ -556,12 +556,14 @@
                     CHECKOUT — COLLECT ORDER (EMAIL)
                 </button>
 
-                <button type="button" onclick="initiateStripeCheckout()"
+                <button type="button" id="stripe-pay-btn" onclick="initiateStripeCheckout()"
                         class="w-full py-4 border border-[#14b8a6] hover:bg-[#14b8a6]/10 text-[#14b8a6] font-semibold rounded-2xl transition-all">
-                    PAY WITH CARD (STRIPE)
+                    PAY WITH CARD
                 </button>
                 
-                <div class="text-center text-[10px] text-[#f5f0e6]/40 mt-4">Orders collected securely. We'll email to confirm & arrange payment/fulfillment.</div>
+                <div class="text-center text-[10px] text-[#f5f0e6]/40 mt-4">
+                    Card payments are secure via Stripe. Email order is a backup if you prefer to pay later.
+                </div>
             </form>
         </div>
     </div>
@@ -1289,35 +1291,95 @@
             }
         }
 
+        function showCheckoutToast(title, detail, isError) {
+            const el = document.createElement('div');
+            el.className = 'fixed bottom-8 left-1/2 -translate-x-1/2 bg-[#111] border border-white/10 px-6 py-4 rounded-2xl text-sm shadow-2xl z-[90] max-w-sm text-center';
+            el.innerHTML = `
+                <div class="font-medium ${isError ? 'text-red-400' : 'text-[#14b8a6]'}">${title}</div>
+                <div class="text-[#f5f0e6]/70 mt-1 text-xs">${detail}</div>
+            `;
+            document.body.appendChild(el);
+            setTimeout(() => {
+                if (el.parentElement) el.parentElement.removeChild(el);
+            }, 6500);
+        }
+
+        function handleCheckoutReturn() {
+            const params = new URLSearchParams(window.location.search);
+            const status = params.get('checkout');
+            if (!status) return;
+
+            if (status === 'success') {
+                cart = [];
+                updateCartCount();
+                try { localStorage.removeItem('hel_cart'); } catch (e) {}
+                showCheckoutToast(
+                    'Payment received — thank you!',
+                    "You'll get a Stripe receipt by email. We'll follow up about shipping & fulfillment."
+                );
+            } else if (status === 'cancel') {
+                showCheckoutToast(
+                    'Checkout canceled',
+                    'No charge was made. Your cart is still here when you\'re ready.',
+                    false
+                );
+            }
+
+            // Clean the URL so refresh doesn't re-show the message
+            if (window.history && window.history.replaceState) {
+                const clean = window.location.pathname + window.location.hash;
+                window.history.replaceState({}, document.title, clean || '/');
+            }
+        }
+
         async function initiateStripeCheckout() {
             const total = cart.reduce((sum, item) => sum + item.price * item.quantity, 0);
             if (total <= 0 || cart.length === 0) {
-                alert("Cart is empty.");
+                alert('Cart is empty.');
                 return;
             }
 
-            if (STRIPE_PUBLISHABLE_KEY.includes('YOUR_STRIPE')) {
-                alert('Stripe publishable key is still the placeholder. Check index.html.');
-                return;
-            }
-
-            // Collect customer info from the form
+            // Collect + validate customer info from the form
             const form = document.querySelector('form[name="order"]');
-            const customerEmail = form ? form.querySelector('input[name="email"]')?.value : '';
-            const customerName = form ? form.querySelector('input[name="name"]')?.value : '';
-            const notes = form ? form.querySelector('textarea[name="notes"]')?.value : '';
+            const nameInput = form ? form.querySelector('input[name="name"]') : null;
+            const emailInput = form ? form.querySelector('input[name="email"]') : null;
+            const notesInput = form ? form.querySelector('textarea[name="notes"]') : null;
 
-            const stripe = (typeof Stripe !== 'undefined') ? Stripe(STRIPE_PUBLISHABLE_KEY) : null;
-            if (!stripe) {
-                alert('Stripe not loaded. Using form fallback.');
-                // fallback to form submit
+            const customerName = (nameInput?.value || '').trim();
+            const customerEmail = (emailInput?.value || '').trim();
+            const notes = (notesInput?.value || '').trim();
+
+            if (!customerName) {
+                alert('Please enter your name before paying with card.');
+                nameInput?.focus();
                 return;
+            }
+            if (!customerEmail || !customerEmail.includes('@')) {
+                alert('Please enter a valid email before paying with card.');
+                emailInput?.focus();
+                return;
+            }
+
+            const payBtn = document.getElementById('stripe-pay-btn');
+            const originalBtnText = payBtn ? payBtn.innerHTML : 'PAY WITH CARD';
+            if (payBtn) {
+                payBtn.innerHTML = 'OPENING SECURE CHECKOUT...';
+                payBtn.disabled = true;
+                payBtn.classList.add('opacity-60', 'cursor-wait');
+            }
+
+            // Only pass a still-valid game discount (24h window, same as cart UI)
+            let discountPayload = null;
+            if (window.currentDiscount && Date.now() - (window.currentDiscount.ts || 0) < 1000 * 60 * 60 * 24) {
+                discountPayload = {
+                    code: window.currentDiscount.code,
+                    percent: window.currentDiscount.percent
+                };
             }
 
             try {
                 console.log('[Stripe] Starting checkout, cart items:', cart.length);
 
-                // Call our Netlify function to create the Checkout Session
                 const response = await fetch('/.netlify/functions/create-stripe-checkout', {
                     method: 'POST',
                     headers: { 'Content-Type': 'application/json' },
@@ -1325,7 +1387,8 @@
                         cart: cart,
                         customerEmail: customerEmail,
                         customerName: customerName,
-                        notes: notes
+                        notes: notes,
+                        discount: discountPayload
                     })
                 });
 
@@ -1338,26 +1401,29 @@
 
                 console.log('[Stripe] Session created:', data);
 
-                // Prefer the hosted checkout url (most reliable), fallback to redirectToCheckout
+                // Hosted Checkout URL is the most reliable path
                 if (data.url) {
-                    console.log('[Stripe] Redirecting to hosted url');
                     window.location.href = data.url;
                     return;
                 }
 
-                const sessionId = data.id;
-                if (!sessionId) {
-                    throw new Error('No session id returned');
+                // Fallback: Stripe.js redirectToCheckout (needs publishable key)
+                if (STRIPE_PUBLISHABLE_KEY && !STRIPE_PUBLISHABLE_KEY.includes('YOUR_STRIPE') && typeof Stripe !== 'undefined' && data.id) {
+                    const stripe = Stripe(STRIPE_PUBLISHABLE_KEY);
+                    const { error } = await stripe.redirectToCheckout({ sessionId: data.id });
+                    if (error) throw error;
+                    return;
                 }
 
-                const { error } = await stripe.redirectToCheckout({ sessionId });
-                if (error) {
-                    console.error('Stripe redirect error:', error);
-                    alert('There was a problem redirecting to the payment page. Please try the email order form instead.');
-                }
+                throw new Error('No checkout URL returned from payment server');
             } catch (err) {
                 console.error('Stripe checkout error:', err);
-                alert(`Payment setup error: ${err.message}\n\nPlease use the "CHECKOUT — COLLECT ORDER" button for now (Netlify Forms will email the order details).`);
+                alert(`Payment setup error: ${err.message}\n\nYou can still use "CHECKOUT — COLLECT ORDER (EMAIL)" and we'll arrange payment with you.`);
+                if (payBtn) {
+                    payBtn.innerHTML = originalBtnText;
+                    payBtn.disabled = false;
+                    payBtn.classList.remove('opacity-60', 'cursor-wait');
+                }
             }
         }
 
@@ -1620,6 +1686,7 @@
             await initProducts();           // Now properly waits for Supabase or fallback
             initMobileMenu();
             initDiscount();  // loads any discount codes saved from the game
+            handleCheckoutReturn();  // thank-you / cancel message after Stripe
             // Ensure Supabase client is ready before loading leaderboard
             setTimeout(() => {
                 const client = getSupabaseClient();
