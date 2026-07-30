@@ -135,7 +135,7 @@
         <div class="surface border border-white/10 rounded-3xl overflow-hidden">
             <div class="px-6 py-4 border-b border-white/10 flex items-center justify-between bg-[#0f1111]">
                 <div class="font-medium">All Products</div>
-                <div class="text-xs text-[#f5f0e6]/50">Changes are saved to this browser only</div>
+                <div class="text-xs text-[#f5f0e6]/50">Changes are saved securely to Supabase</div>
             </div>
 
             <div class="overflow-x-auto">
@@ -158,9 +158,7 @@
         </div>
 
         <div class="mt-6 text-xs text-[#f5f0e6]/40 max-w-2xl">
-            <strong>How this works:</strong> This admin panel saves everything in your browser's localStorage. 
-            When you open <code class="text-[#14b8a6]">index.html</code>, it automatically loads the latest products you saved here. 
-            This is perfect for testing and local editing. For a real public website, we can later connect this to a proper database (Supabase, etc.).
+            <strong>How this works:</strong> This editor uses your signed-in Supabase account. Product changes are saved to the shared catalog and appear on the live site.
         </div>
     </div>
 
@@ -603,35 +601,15 @@
             }, 2800);
         }
 
-        function logout() {
-            sessionStorage.removeItem('hel_admin_unlocked');
+        async function logout() {
+            const client = getSupabaseClient();
+            if (client) await client.auth.signOut();
             window.location.href = "index.html";
         }
 
-        // === NEW AUTHENTICATION SYSTEM ===
-
-        function getAdminPassword() {
-            // IMPORTANT: Change this default password before going live!
-            // The current protection is client-side only (basic).
-            // For better security later we can add real Supabase user login.
-            const pass = localStorage.getItem('hel_admin_password');
-            // During setup only - will be replaced by your custom password
-            if (!pass || pass === 'helaphant-CHANGE-THIS-NOW') {
-                return 'helaphant';
-            }
-            return pass;
-        }
-
-        function setAdminPassword(newPass) {
-            localStorage.setItem('hel_admin_password', newPass);
-        }
-
-        function isUnlockedThisSession() {
-            return sessionStorage.getItem('hel_admin_unlocked') === 'true';
-        }
-
-        function unlockSession() {
-            sessionStorage.setItem('hel_admin_unlocked', 'true');
+        function showAdminContent() {
+            hideLoginScreen();
+            document.getElementById('admin-content').style.display = 'block';
         }
 
         function showLoginScreen() {
@@ -654,22 +632,37 @@
         }
 
         async function attemptLogin() {
-            const input = document.getElementById('login-password').value;
-            const correctPass = getAdminPassword();
+            const email = document.getElementById('login-email').value.trim();
+            const passwordField = document.getElementById('login-password');
+            const password = passwordField.value;
+            const errorEl = document.getElementById('login-error');
+            const submitButton = document.getElementById('login-submit');
+            const client = getSupabaseClient();
 
-            if (input === correctPass) {
-                unlockSession();
-                hideLoginScreen();
-                document.getElementById('admin-content').style.display = 'block';
-                await loadProducts(); // now safe to load from Supabase
-                console.log('%c[Helaphant Admin] Access granted', 'color:#14b8a6');
-            } else {
-                const field = document.getElementById('login-password');
-                field.classList.add('border-red-500');
-                setTimeout(() => field.classList.remove('border-red-500'), 1200);
-                field.value = '';
-                field.placeholder = 'Incorrect password';
+            if (!client) {
+                errorEl.textContent = 'Sign-in is not ready. Please refresh and try again.';
+                errorEl.classList.remove('hidden');
+                return;
             }
+
+            submitButton.disabled = true;
+            submitButton.textContent = 'SIGNING IN...';
+            errorEl.classList.add('hidden');
+
+            const { error } = await client.auth.signInWithPassword({ email, password });
+            submitButton.disabled = false;
+            submitButton.textContent = 'SIGN IN';
+
+            if (error) {
+                errorEl.textContent = 'That email or password is not correct.';
+                errorEl.classList.remove('hidden');
+                passwordField.value = '';
+                passwordField.focus();
+                return;
+            }
+
+            showAdminContent();
+            await loadProducts();
         }
 
         function togglePasswordVisibility() {
@@ -793,6 +786,30 @@
             }
         });
 
+        // Supabase owns the admin session. No browser-stored password is used.
+        async function initializeAdmin() {
+            const client = getSupabaseClient();
+            if (!client) {
+                showLoginScreen();
+                return;
+            }
+
+            const { data: { session } } = await client.auth.getSession();
+            if (session) {
+                showAdminContent();
+                await loadProducts();
+            } else {
+                showLoginScreen();
+            }
+
+            client.auth.onAuthStateChange((_event, session) => {
+                if (!session) {
+                    document.getElementById('admin-content').style.display = 'none';
+                    showLoginScreen();
+                }
+            });
+        }
+
         window.onload = () => initializeAdmin();
     </script>
 
@@ -810,11 +827,18 @@
 
             <div class="surface border border-white/10 rounded-3xl p-8">
                 <div class="text-center mb-6">
-                    <div class="text-lg font-medium">Enter Password</div>
-                    <div class="text-xs text-[#f5f0e6]/50 mt-1">This protects the product editor</div>
+                    <div class="text-lg font-medium">Sign in</div>
+                    <div class="text-xs text-[#f5f0e6]/50 mt-1">Use the private Supabase admin account</div>
                 </div>
 
                 <div class="space-y-4">
+                    <div>
+                        <label class="text-xs tracking-widest text-[#f5f0e6]/60 block mb-2">EMAIL</label>
+                        <input id="login-email" type="email"
+                               class="admin-input w-full rounded-2xl px-4 py-3.5 text-sm"
+                               placeholder="you@example.com"
+                               autocomplete="email">
+                    </div>
                     <div>
                         <label class="text-xs tracking-widest text-[#f5f0e6]/60 block mb-2">PASSWORD</label>
                         <div class="relative">
@@ -829,17 +853,12 @@
                         </div>
                     </div>
 
-                    <button onclick="attemptLogin()" 
-                            class="w-full py-4 bg-[#0f766e] hover:bg-[#115e59] rounded-2xl font-semibold text-sm tracking-wide transition-colors">
-                        UNLOCK ADMIN
-                    </button>
+                    <div id="login-error" class="hidden text-center text-sm text-red-400"></div>
 
-                    <div class="text-center">
-                        <button onclick="showSetPasswordModal()" 
-                                class="text-xs text-[#14b8a6] hover:underline">
-                            Set or change password
-                        </button>
-                    </div>
+                    <button id="login-submit" onclick="attemptLogin()"
+                            class="w-full py-4 bg-[#0f766e] hover:bg-[#115e59] rounded-2xl font-semibold text-sm tracking-wide transition-colors">
+                        SIGN IN
+                    </button>
                 </div>
             </div>
 
