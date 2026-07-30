@@ -230,8 +230,7 @@
                 <div class="text-[#14b8a6] text-sm tracking-[3px] font-medium mb-6">WAGING WAR THROUGH ART.</div>
                 
                 <p class="max-w-md text-2xl text-[#f5f0e6]/90 leading-tight tracking-tight mb-10">
-                    A lady savage.<br>
-                    Fierce. Protective. Unyielding.
+                    Made for the sacred, the savage, and the strange.
                 </p>
 
                 <div class="flex flex-wrap gap-4">
@@ -263,8 +262,8 @@
             </div>
             <div class="md:col-span-5 mt-8 md:mt-6 text-lg text-[#f5f0e6]/80 leading-relaxed">
                 A fusion of two ancient forces.<br><br>
-                <span class="text-[#14b8a6]">Hel</span> — the fierce Norse goddess who rules the underworld with a half-decayed face and an iron will.<br><br>
-                <span class="text-[#14b8a6]">The Elephant</span> — matriarch, protector, keeper of memory. The one who forms the circle when one of her own is vulnerable.
+                <span class="text-[#14b8a6]">Hel</span> — Norse goddess, half living, half dead; neither a cruel demon nor a merciful savior, but the unemotional prison guard of those who failed a valiant death.<br><br>
+                <span class="text-[#14b8a6]">The Elephant</span> — matriarch, harmony, and devoted mother; modeling nurturing leadership and guardian of memory.
             </div>
         </div>
 
@@ -328,7 +327,7 @@
     <section id="shop" class="max-w-7xl mx-auto px-8 py-20">
         <div class="flex items-end justify-between mb-10">
             <div>
-                <div class="hel-text tracking-[3px] text-[#0f766e]">CURATED FOR THE SAVAGE</div>
+                <div class="hel-text tracking-[3px] text-[#0f766e]">CURATED FOR THE WHIMSY</div>
                 <h3 class="heading-serif text-6xl tracking-[-2px]">Shop</h3>
             </div>
             <a href="#" onclick="showAllProducts(); return false;" 
@@ -343,6 +342,10 @@
                 <i class="fa-solid fa-th-large text-3xl mb-4 text-[#14b8a6]"></i>
                 <div class="font-semibold">All Work</div>
             </div>
+            <div onclick="filterByCategory('originals')" class="category-card cursor-pointer border border-white/10 hover:border-[#14b8a6] surface rounded-3xl p-6 text-center">
+                <i class="fa-solid fa-palette text-3xl mb-4 text-[#14b8a6]"></i>
+                <div class="font-semibold">Original Art</div>
+            </div>
             <div onclick="filterByCategory('prints')" class="category-card cursor-pointer border border-white/10 hover:border-[#14b8a6] surface rounded-3xl p-6 text-center">
                 <i class="fa-solid fa-image text-3xl mb-4 text-[#14b8a6]"></i>
                 <div class="font-semibold">Art Prints</div>
@@ -354,7 +357,10 @@
                 <div class="text-xs text-[#f5f0e6]/50 mt-0.5">Hand-painted</div>
             </div>
             <div onclick="filterByCategory('patches')" class="category-card cursor-pointer border border-white/10 hover:border-[#14b8a6] surface rounded-3xl p-6 text-center">
-                <i class="fa-solid fa-tag text-3xl mb-4 text-[#14b8a6]"></i>
+                <svg class="w-9 h-9 mx-auto mb-4 text-[#14b8a6]" viewBox="0 0 64 64" fill="currentColor" aria-hidden="true">
+                    <path d="M30 28c-7-12-17-16-24-13 1 10 7 19 21 21l3-8Zm4 0c7-12 17-16 24-13-1 10-7 19-21 21l-3-8Zm-4 10c-8 1-14 7-16 15 8 3 15 0 19-8l-3-7Zm4 0c8 1 14 7 16 15-8 3-15 0-19-8l3-7ZM29 25h6l2 22-5 9-5-9 2-22Z"/>
+                    <path d="M30 23 25 16l2-2 5 6m2 3 5-7-2-2-5 6" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"/>
+                </svg>
                 <div class="font-semibold">Patches</div>
                 <div class="text-xs text-[#f5f0e6]/50 mt-0.5">Iron-on</div>
             </div>
@@ -362,10 +368,6 @@
                 <i class="fa-solid fa-sticky-note text-3xl mb-4 text-[#14b8a6]"></i>
                 <div class="font-semibold">Slaps</div>
                 <div class="text-xs text-[#f5f0e6]/50 mt-0.5">Vinyl stickers</div>
-            </div>
-            <div onclick="filterByCategory('originals')" class="category-card cursor-pointer border border-white/10 hover:border-[#14b8a6] surface rounded-3xl p-6 text-center">
-                <i class="fa-solid fa-palette text-3xl mb-4 text-[#14b8a6]"></i>
-                <div class="font-semibold">Original Art</div>
             </div>
         </div>
 
@@ -386,13 +388,11 @@
     <!-- Join the Circle -->
     <section id="contact" class="max-w-3xl mx-auto px-8 py-20 text-center border-b border-white/10">
         <div class="mx-auto max-w-md">
-            <div class="hel-text text-[#0f766e] tracking-[3.5px]">STAY IN THE CIRCLE</div>
-            <h3 class="heading-serif text-5xl mt-3 tracking-[-1.5px]">JOIN THE CIRCLE</h3>
+            <h3 class="heading-serif text-5xl tracking-[-1.5px]">LET'S BE FRENS</h3>
             <p class="mt-4 text-[#f5f0e6]/70">I won't spam you. Just the occasional email when something actually matters.</p>
 
-            <form name="newsletter" method="POST" data-netlify="true" netlify onsubmit="subscribeNewsletter(event)" class="mt-8">
-                <input type="hidden" name="form-name" value="newsletter" />
-                <!-- Honeypot for spam bots (Netlify) -->
+            <form name="newsletter" onsubmit="subscribeNewsletter(event)" class="mt-8">
+                <!-- Honeypot for spam bots -->
                 <input type="text" name="bot-field" class="hidden" tabindex="-1" autocomplete="off" />
                 <div class="flex">
                     <input type="email" name="email" placeholder="your@email.com" required
@@ -410,7 +410,7 @@
     <!-- Footer -->
     <footer class="max-w-7xl mx-auto px-8 py-12 text-xs text-[#f5f0e6]/50">
         <div class="flex flex-col md:flex-row gap-y-4 items-center justify-between">
-            <div>© WAR HELAPHANT. All rights fiercely protected.</div>
+            <div>WAR HELAPHANT</div>
             <div class="flex gap-x-6 items-center">
                 <a href="https://x.com/warhelaphant" target="_blank" rel="noopener" class="hover:text-[#f5f0e6] inline-flex items-center gap-x-1.5">
                     <i class="fa-brands fa-x-twitter"></i>
@@ -1443,31 +1443,18 @@
             btn.disabled = true;
 
             try {
-                // Submit to Netlify Forms (works on live deploy)
-                const formData = new FormData(form);
-                const response = await fetch("/", {
+                const response = await fetch("/.netlify/functions/subscribe-newsletter", {
                     method: "POST",
-                    headers: { "Content-Type": "application/x-www-form-urlencoded" },
-                    body: new URLSearchParams(formData).toString()
+                    headers: { "Content-Type": "application/json" },
+                    body: JSON.stringify({
+                        email: email,
+                        botField: honeypot ? honeypot.value : ''
+                    })
                 });
 
                 if (!response.ok) {
-                    throw new Error('Netlify form submission failed');
-                }
-
-                // Optional: also save to Supabase 'subscribers' table if it exists
-                const client = getSupabaseClient();
-                if (client) {
-                    try {
-                        await client.from('subscribers').insert([{
-                            email: email,
-                            source: 'website-join-circle',
-                            created_at: new Date().toISOString()
-                        }]);
-                    } catch (dbErr) {
-                        // Table may not exist yet — that's okay for now
-                        console.log('[Newsletter] Supabase subscribers table not found or insert failed (non-critical):', dbErr.message);
-                    }
+                    const result = await response.json().catch(() => ({}));
+                    throw new Error(result.error || 'Newsletter signup failed');
                 }
 
                 // Success UX
@@ -1480,7 +1467,7 @@
 
                     const successMsg = document.createElement('div');
                     successMsg.className = 'text-[#14b8a6] text-sm mt-1';
-                    successMsg.innerHTML = `You're in. <span class="text-[#f5f0e6]/60">We'll email you when it matters.</span>`;
+                    successMsg.innerHTML = `Check your inbox to confirm. <span class="text-[#f5f0e6]/60">Then you're in.</span>`;
                     parent.appendChild(successMsg);
 
                     // Optional: allow re-subscribing after some time (for testing)
@@ -1494,6 +1481,10 @@
 
             } catch (err) {
                 console.error('Newsletter signup error:', err);
+                alert(err.message || 'We could not add that email right now. Please try again.');
+                btn.innerHTML = originalText;
+                btn.disabled = false;
+                return;
 
                 // Fallback for local development or if fetch fails
                 btn.innerHTML = 'JOINED ✓';
