@@ -17,6 +17,31 @@ function moneyCents(amount) {
   return Math.round(n * 100);
 }
 
+function isFiveBySevenPrint(item) {
+  const text = [item.title, item.variant, item.description]
+    .filter(Boolean)
+    .join(' ')
+    .toLowerCase();
+  return /5\s*(?:x|×|by)\s*7/.test(text);
+}
+
+function shippingForCart(cart) {
+  // Original art is priced with shipping included. For all other items,
+  // a 5x7 print ships for $5; larger prints and regular merchandise ship for $7.
+  const shippableItems = cart.filter((item) => String(item.category || '').toLowerCase() !== 'originals');
+  if (shippableItems.length === 0) {
+    return { amount: 0, displayName: 'Shipping included with original art' };
+  }
+
+  const onlyFiveBySevenPrints = shippableItems.every(
+    (item) => String(item.category || '').toLowerCase() === 'prints' && isFiveBySevenPrint(item)
+  );
+
+  return onlyFiveBySevenPrints
+    ? { amount: 500, displayName: 'Standard shipping (5x7 prints)' }
+    : { amount: 700, displayName: 'Standard shipping' };
+}
+
 exports.handler = async (event) => {
   if (event.httpMethod === 'OPTIONS') {
     return {
@@ -112,6 +137,8 @@ exports.handler = async (event) => {
       process.env.STRIPE_CANCEL_URL ||
       'https://helaphant.com/?checkout=cancel';
 
+    const shipping = shippingForCart(cart);
+
     const session = await stripe.checkout.sessions.create({
       mode: 'payment',
       payment_method_types: ['card'],
@@ -122,11 +149,16 @@ exports.handler = async (event) => {
       client_reference_id: name.slice(0, 200),
       // Collect ship-to address. Expand this list anytime you ship more places.
       shipping_address_collection: {
-        allowed_countries: [
-          'US', 'CA', 'GB', 'AU', 'NZ', 'IE', 'DE', 'FR', 'NL', 'BE',
-          'AT', 'CH', 'SE', 'NO', 'DK', 'FI', 'ES', 'IT', 'PT', 'JP', 'MX'
-        ],
+        // Flat shipping rates below are for domestic orders only.
+        allowed_countries: ['US'],
       },
+      shipping_options: [{
+        shipping_rate_data: {
+          type: 'fixed_amount',
+          fixed_amount: { amount: shipping.amount, currency: 'usd' },
+          display_name: shipping.displayName,
+        },
+      }],
       phone_number_collection: {
         enabled: true,
       },
