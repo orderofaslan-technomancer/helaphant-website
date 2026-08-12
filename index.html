@@ -899,15 +899,29 @@
             document.getElementById('shop').scrollIntoView({ behavior: 'smooth' });
         }
 
+        const standardPrintSizes = [
+            { label: '5 x 7', price: 15 },
+            { label: '8 x 10', price: 20 },
+            { label: '11 x 14', price: 25 }
+        ];
+
+        function getProductOptions(product) {
+            if (product.category === 'prints') return standardPrintSizes;
+            return (product.variants || ['One Size']).map(label => ({ label, price: product.price }));
+        }
+
         function showProductModal(productId) {
             const product = products.find(p => p.id === productId);
             if (!product) return;
 
             currentProduct = product;
+            const options = getProductOptions(product);
+            currentProduct.selectedVariant = options[0].label;
+            currentProduct.selectedPrice = options[0].price;
 
             // Populate modal
             document.getElementById('modal-title').textContent = product.title;
-            document.getElementById('modal-price').textContent = `$${product.price}`;
+            document.getElementById('modal-price').textContent = `$${options[0].price}`;
             document.getElementById('modal-category').textContent = product.category.toUpperCase();
             document.getElementById('modal-description').textContent = product.description;
 
@@ -921,12 +935,12 @@
             // Variants
             const variantsContainer = document.getElementById('modal-variants');
             variantsContainer.innerHTML = `
-                <div class="text-xs tracking-[2px] text-[#14b8a6] mb-3">SELECT ${product.variants.length > 1 ? 'OPTION' : 'SIZE'}</div>
+                <div class="text-xs tracking-[2px] text-[#14b8a6] mb-3">SELECT ${options.length > 1 ? 'OPTION' : 'SIZE'}</div>
                 <div class="flex flex-wrap gap-2" id="variant-buttons">
-                    ${product.variants.map((v, i) => `
-                        <button onclick="selectVariant(this, '${v}')" 
+                    ${options.map((option, i) => `
+                        <button onclick="selectVariant(this, '${option.label}', ${option.price})"
                                 class="variant-btn px-5 py-2 text-sm border ${i === 0 ? 'border-[#14b8a6] bg-white/5' : 'border-white/15'} hover:border-[#14b8a6] rounded-2xl transition-colors">
-                            ${v}
+                            ${option.label}${product.category === 'prints' ? ` — $${option.price}` : ''}
                         </button>
                     `).join('')}
                 </div>
@@ -936,7 +950,7 @@
             document.getElementById('product-modal').classList.add('flex');
         }
 
-        function selectVariant(element, value) {
+        function selectVariant(element, value, price) {
             // Deselect all
             document.querySelectorAll('#variant-buttons .variant-btn').forEach(btn => {
                 btn.classList.remove('border-[#14b8a6]', 'bg-white/5');
@@ -949,6 +963,8 @@
             
             // Store selection
             currentProduct.selectedVariant = value;
+            currentProduct.selectedPrice = Number.isFinite(Number(price)) ? Number(price) : currentProduct.price;
+            document.getElementById('modal-price').textContent = `$${currentProduct.selectedPrice}`;
         }
 
         function closeProductModal() {
@@ -962,18 +978,23 @@
             const product = products.find(p => p.id === productId);
             if (!product) return;
 
-            addToCart(product, product.variants[0] || 'One Size');
+            const option = getProductOptions(product)[0];
+            addToCart(product, option.label, option.price);
         }
 
         function addCurrentProductToCart() {
             if (!currentProduct) return;
 
-            const variant = currentProduct.selectedVariant || currentProduct.variants[0] || 'One Size';
-            addToCart(currentProduct, variant);
+            const option = getProductOptions(currentProduct)[0];
+            const variant = currentProduct.selectedVariant || option.label;
+            const price = Number.isFinite(Number(currentProduct.selectedPrice))
+                ? Number(currentProduct.selectedPrice)
+                : option.price;
+            addToCart(currentProduct, variant, price);
             closeProductModal();
         }
 
-        function addToCart(product, variant) {
+        function addToCart(product, variant, selectedPrice) {
             const existing = cart.findIndex(item => item.id === product.id && item.variant === variant);
             
             if (existing !== -1) {
@@ -982,6 +1003,7 @@
                 cart.push({
                     ...product,
                     variant: variant,
+                    price: Number.isFinite(Number(selectedPrice)) ? Number(selectedPrice) : product.price,
                     quantity: 1
                 });
             }
