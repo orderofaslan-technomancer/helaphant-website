@@ -211,15 +211,13 @@
                 </div>
 
                 <div>
-                    <label class="block text-xs tracking-widest text-[#f5f0e6]/60 mb-2">IMAGE URL</label>
-                    <input id="form-image" type="text" placeholder="https://... or leave blank for placeholder" 
-                           class="admin-input w-full rounded-2xl px-4 py-3 text-sm" oninput="updateImagePreview()">
-                    <div class="mt-3 flex items-center gap-4">
-                        <div class="w-20 h-20 bg-[#0a0a0a] border border-white/10 rounded-2xl overflow-hidden flex-shrink-0">
-                            <img id="image-preview" src="https://picsum.photos/id/1015/300/300" class="w-full h-full object-cover">
-                        </div>
-                        <div class="text-xs text-[#f5f0e6]/50">Live preview. Use real image links for production.</div>
-                    </div>
+                    <label class="block text-xs tracking-widest text-[#f5f0e6]/60 mb-2">ARTWORK PHOTOS</label>
+                    <input id="form-images" type="file" accept="image/jpeg,image/png,image/webp" multiple
+                           class="block w-full text-sm text-[#f5f0e6]/70 file:mr-4 file:rounded-xl file:border-0 file:bg-[#0f766e] file:px-4 file:py-2 file:text-sm file:font-semibold file:text-white hover:file:bg-[#115e59]">
+                    <input id="form-image" type="url" placeholder="Optional backup image URL"
+                           class="admin-input w-full rounded-2xl px-4 py-3 text-sm mt-3" oninput="updateImagePreview()">
+                    <div id="image-previews" class="mt-3 grid grid-cols-4 gap-3"></div>
+                    <div class="text-xs text-[#f5f0e6]/50 mt-3">Choose up to 8 JPG, PNG, or WebP photos. The first image is the cover; click “Make cover” to change it.</div>
                 </div>
 
                 <div>
@@ -262,6 +260,7 @@
 
         let products = [];
         let editingId = null;
+        let productImages = [];
 
         async function loadProducts() {
             updateSupabaseStatus('connecting');
@@ -436,8 +435,10 @@
             document.getElementById('form-category').value = 'prints';
             document.getElementById('form-description').value = '';
             document.getElementById('form-image').value = '';
+            document.getElementById('form-images').value = '';
             document.getElementById('form-badge').value = '';
             document.getElementById('form-variants').value = 'Standard';
+            productImages = [];
             
             updateImagePreview();
             document.getElementById('product-modal').classList.remove('hidden');
@@ -456,8 +457,10 @@
             document.getElementById('form-category').value = product.category;
             document.getElementById('form-description').value = product.description || '';
             document.getElementById('form-image').value = product.image || '';
+            document.getElementById('form-images').value = '';
             document.getElementById('form-badge').value = product.badge || '';
             document.getElementById('form-variants').value = (product.variants || []).join(', ');
+            productImages = [...new Set([...(Array.isArray(product.images) ? product.images : []), product.image].filter(Boolean))];
 
             updateImagePreview();
             document.getElementById('product-modal').classList.remove('hidden');
@@ -466,13 +469,60 @@
 
         function updateImagePreview() {
             const input = document.getElementById('form-image').value.trim();
-            const preview = document.getElementById('image-preview');
-            
-            if (input) {
-                preview.src = input;
-            } else {
-                preview.src = 'https://picsum.photos/id/1015/300/300';
+            if (input && productImages.length === 0) productImages = [input];
+            renderImagePreviews();
+        }
+
+        function renderImagePreviews() {
+            const container = document.getElementById('image-previews');
+            if (!container) return;
+            if (productImages.length === 0) {
+                container.innerHTML = '<div class="col-span-4 text-xs text-[#f5f0e6]/40 py-2">No artwork photos selected yet.</div>';
+                return;
             }
+            container.innerHTML = productImages.map((url, index) => `
+                <div class="relative aspect-square rounded-xl overflow-hidden border ${index === 0 ? 'border-[#14b8a6]' : 'border-white/10'} bg-[#0a0a0a]">
+                    <img src="${url}" class="w-full h-full object-cover" alt="Artwork photo ${index + 1}">
+                    <div class="absolute inset-x-1 bottom-1 flex gap-1">
+                        ${index === 0
+                            ? '<span class="bg-[#0f766e] text-white text-[9px] px-1.5 py-1 rounded">COVER</span>'
+                            : `<button type="button" onclick="makeCover(${index})" class="bg-black/75 text-white text-[9px] px-1.5 py-1 rounded">Make cover</button>`}
+                        <button type="button" onclick="removeProductImage(${index})" class="ml-auto bg-black/75 text-red-300 text-[11px] px-1.5 py-1 rounded" aria-label="Remove photo">×</button>
+                    </div>
+                </div>
+            `).join('');
+        }
+
+        function makeCover(index) {
+            productImages.unshift(productImages.splice(index, 1)[0]);
+            renderImagePreviews();
+        }
+
+        function removeProductImage(index) {
+            productImages.splice(index, 1);
+            renderImagePreviews();
+        }
+
+        async function uploadSelectedImages(client) {
+            const files = Array.from(document.getElementById('form-images').files || []);
+            if (files.length === 0) return;
+            if (productImages.length + files.length > 8) throw new Error('Please use no more than 8 photos per product.');
+
+            for (const file of files) {
+                if (!/^image\/(jpeg|png|webp)$/.test(file.type)) throw new Error('Use JPG, PNG, or WebP photos only.');
+                if (file.size > 10 * 1024 * 1024) throw new Error('Each photo must be 10 MB or smaller.');
+
+                const safeName = file.name.toLowerCase().replace(/[^a-z0-9._-]+/g, '-');
+                const path = `products/${Date.now()}-${crypto.randomUUID()}-${safeName}`;
+                const { error } = await client.storage.from('product-images').upload(path, file, {
+                    cacheControl: '3600', upsert: false, contentType: file.type
+                });
+                if (error) throw error;
+                const { data } = client.storage.from('product-images').getPublicUrl(path);
+                productImages.push(data.publicUrl);
+            }
+            document.getElementById('form-images').value = '';
+            renderImagePreviews();
         }
 
         async function saveProductFromForm() {
@@ -492,12 +542,24 @@
             const saveBtn = event.currentTarget; // not reliable from form, we'll use a simple approach
             const originalText = "Save Product";
 
+            try {
+                await uploadSelectedImages(client);
+            } catch (error) {
+                console.error('Image upload error:', error);
+                alert(`Photo upload failed: ${error.message || 'Please check the storage setup.'}`);
+                return;
+            }
+
+            const backupImage = document.getElementById('form-image').value.trim();
+            if (productImages.length === 0 && backupImage) productImages = [backupImage];
+
             const productData = {
                 title: title,
                 price: parseFloat(document.getElementById('form-price').value) || 0,
                 category: document.getElementById('form-category').value,
                 description: document.getElementById('form-description').value.trim(),
-                image: document.getElementById('form-image').value.trim() || 'https://picsum.photos/id/1015/800/800',
+                image: productImages[0] || 'https://picsum.photos/id/1015/800/800',
+                images: productImages,
                 badge: document.getElementById('form-badge').value.trim() || null,
                 variants: document.getElementById('form-variants').value.split(',').map(v => v.trim()).filter(Boolean)
             };

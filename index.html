@@ -910,6 +910,38 @@
             return (product.variants || ['One Size']).map(label => ({ label, price: product.price }));
         }
 
+        function getProductImages(product) {
+            return [...new Set([...(Array.isArray(product.images) ? product.images : []), product.image].filter(Boolean))];
+        }
+
+        function renderProductGallery() {
+            if (!currentProduct) return;
+            const images = getProductImages(currentProduct);
+            const selectedIndex = Math.min(currentProduct.selectedImageIndex || 0, images.length - 1);
+            currentProduct.selectedImageIndex = selectedIndex;
+            const imageContainer = document.getElementById('modal-image');
+            imageContainer.innerHTML = `
+                <img src="${images[selectedIndex]}" alt="${currentProduct.title}" class="max-h-full max-w-full object-contain p-8"
+                     onerror="this.src='https://picsum.photos/id/1015/600/600'">
+                ${images.length > 1 ? `
+                    <div class="absolute inset-x-0 bottom-4 flex justify-center gap-2 px-4">
+                        ${images.map((url, index) => `
+                            <button onclick="selectProductImage(${index})" aria-label="View photo ${index + 1}"
+                                    class="w-12 h-12 rounded-xl overflow-hidden border ${index === selectedIndex ? 'border-[#14b8a6]' : 'border-white/20'} bg-black/70">
+                                <img src="${url}" class="w-full h-full object-cover" alt="">
+                            </button>
+                        `).join('')}
+                    </div>
+                ` : ''}
+            `;
+        }
+
+        function selectProductImage(index) {
+            if (!currentProduct) return;
+            currentProduct.selectedImageIndex = index;
+            renderProductGallery();
+        }
+
         function showProductModal(productId) {
             const product = products.find(p => p.id === productId);
             if (!product) return;
@@ -918,6 +950,7 @@
             const options = getProductOptions(product);
             currentProduct.selectedVariant = options[0].label;
             currentProduct.selectedPrice = options[0].price;
+            currentProduct.selectedImageIndex = 0;
 
             // Populate modal
             document.getElementById('modal-title').textContent = product.title;
@@ -925,12 +958,7 @@
             document.getElementById('modal-category').textContent = product.category.toUpperCase();
             document.getElementById('modal-description').textContent = product.description;
 
-            // Image
-            const imageContainer = document.getElementById('modal-image');
-            imageContainer.innerHTML = `
-                <img src="${product.image}" alt="${product.title}" class="max-h-full max-w-full object-contain p-8"
-                     onerror="this.src='https://picsum.photos/id/1015/600/600'">
-            `;
+            renderProductGallery();
 
             // Variants
             const variantsContainer = document.getElementById('modal-variants');
