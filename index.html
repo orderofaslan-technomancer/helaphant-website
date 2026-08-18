@@ -795,6 +795,7 @@
                 const { data, error } = await client
                     .from('products')
                     .select('*')
+                    .eq('is_active', true)
                     .order('id', { ascending: true });
 
                 if (error) {

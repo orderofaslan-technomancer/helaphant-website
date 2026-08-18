@@ -36,7 +36,7 @@ function normalizeItems(cart) {
 
 async function getProducts(ids) {
   const list = ids.join(',');
-  return request(`/rest/v1/products?select=id,title,category,price,description,inventory_count&id=in.(${list})`);
+  return request(`/rest/v1/products?select=id,title,category,price,description,inventory_count,is_active&id=in.(${list})&is_active=eq.true`);
 }
 
 async function callRpc(name, payload) {

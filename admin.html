@@ -147,6 +147,7 @@
                             <th class="px-6 py-4 font-normal w-28">Category</th>
                             <th class="px-6 py-4 font-normal w-24 text-right">Price</th>
                             <th class="px-6 py-4 font-normal w-24 text-right">Stock</th>
+                            <th class="px-6 py-4 font-normal w-28">Visibility</th>
                             <th class="px-6 py-4 font-normal w-32">Image</th>
                             <th class="px-6 py-4 font-normal w-40">Actions</th>
                         </tr>
@@ -367,13 +368,14 @@
             tbody.innerHTML = '';
 
             if (products.length === 0) {
-                tbody.innerHTML = `<tr><td colspan="7" class="px-6 py-12 text-center text-[#f5f0e6]/50">No products yet. Add your first one above.</td></tr>`;
+                tbody.innerHTML = `<tr><td colspan="8" class="px-6 py-12 text-center text-[#f5f0e6]/50">No products yet. Add your first one above.</td></tr>`;
                 return;
             }
 
             products.forEach(product => {
                 const row = document.createElement('tr');
-                row.className = 'product-row border-b border-white/10 last:border-0';
+                const isActive = product.is_active !== false;
+                row.className = `product-row border-b border-white/10 last:border-0 ${isActive ? '' : 'opacity-50'}`;
                 
                 const badgeHtml = product.badge 
                     ? `<span class="text-[10px] px-2 py-0.5 rounded bg-[#0f766e]/20 text-[#14b8a6]">${product.badge}</span>` 
@@ -396,6 +398,12 @@
                     </td>
                     <td class="px-6 py-5 text-right font-mono">$${product.price}</td>
                     <td class="px-6 py-5 text-right font-mono">${stockHtml}</td>
+                    <td class="px-6 py-5">
+                        <button onclick="toggleProductActive(${product.id})"
+                                class="px-3 py-1.5 text-xs rounded-2xl border transition-colors ${isActive ? 'border-emerald-500/40 text-emerald-300 hover:bg-emerald-500/10' : 'border-white/15 text-[#f5f0e6]/55 hover:bg-white/5'}">
+                            ${isActive ? 'Active' : 'Inactive'}
+                        </button>
+                    </td>
                     <td class="px-6 py-5">
                         <div class="w-12 h-12 bg-[#0a0a0a] rounded-2xl overflow-hidden border border-white/10">
                             <img src="${product.image}" class="w-full h-full object-cover" onerror="this.src='https://picsum.photos/id/1015/300/300'">
@@ -618,6 +626,31 @@
                 console.error('Supabase save error:', error);
                 alert("Failed to save to Supabase. Check console for details.");
             }
+        }
+
+        async function toggleProductActive(id) {
+            const product = products.find(p => p.id === id);
+            const client = getSupabaseClient();
+            if (!product || !client) {
+                alert('Supabase is not connected. Please reload and try again.');
+                return;
+            }
+
+            const isActive = product.is_active !== false;
+            const { error } = await client
+                .from('products')
+                .update({ is_active: !isActive })
+                .eq('id', id);
+
+            if (error) {
+                console.error('Product visibility update failed:', error);
+                alert('Could not update this product. Please try again.');
+                return;
+            }
+
+            product.is_active = !isActive;
+            renderTable();
+            showToast(product.is_active ? 'Product is active on the shop.' : 'Product is hidden from the shop.');
         }
 
         async function deleteProduct(id) {
