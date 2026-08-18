@@ -166,16 +166,16 @@
 
     <!-- Add / Edit Modal -->
     <div id="product-modal" onclick="if (event.target.id === 'product-modal') closeModal()" 
-         class="hidden fixed inset-0 bg-black/90 z-50 flex items-center justify-center p-6">
+         class="hidden fixed inset-0 bg-black/90 z-50 flex items-start md:items-center justify-center overflow-y-auto p-4 md:p-6">
         <div onclick="event.stopImmediatePropagation()" 
-             class="surface border border-white/10 w-full max-w-2xl rounded-3xl overflow-hidden">
+             class="surface border border-white/10 w-full max-w-2xl max-h-[calc(100vh-2rem)] my-auto rounded-3xl overflow-hidden flex flex-col">
             
-            <div class="px-8 py-6 border-b border-white/10 flex items-center justify-between">
+            <div class="px-8 py-6 border-b border-white/10 flex items-center justify-between shrink-0">
                 <div class="font-semibold text-xl" id="modal-title-text">Add New Product</div>
                 <button onclick="closeModal()" class="text-3xl text-[#f5f0e6]/40 hover:text-white">×</button>
             </div>
 
-            <div class="p-8 space-y-6">
+            <div class="p-8 space-y-6 overflow-y-auto">
                 <div class="grid grid-cols-1 md:grid-cols-3 gap-6">
                     <div>
                         <label class="block text-xs tracking-widest text-[#f5f0e6]/60 mb-2">TITLE</label>
@@ -234,7 +234,7 @@
                 </div>
             </div>
 
-            <div class="px-8 py-6 bg-[#0a0a0a] border-t border-white/10 flex gap-3 justify-end">
+            <div class="px-8 py-6 bg-[#0a0a0a] border-t border-white/10 flex gap-3 justify-end shrink-0">
                 <button onclick="closeModal()" 
                         class="px-6 py-3 rounded-2xl border border-white/15 hover:bg-white/5 text-sm">Cancel</button>
                 <button onclick="saveProductFromForm()" 
@@ -292,7 +292,8 @@
                     const { data, error } = await client
                         .from('products')
                         .select('*')
-                        .order('id', { ascending: true });
+                .order('sort_order', { ascending: true, nullsFirst: false })
+                .order('id', { ascending: true });
 
                     if (error) {
                         console.error('Supabase query error:', error);
@@ -376,6 +377,13 @@
                 const row = document.createElement('tr');
                 const isActive = product.is_active !== false;
                 row.className = `product-row border-b border-white/10 last:border-0 ${isActive ? '' : 'opacity-50'}`;
+                row.draggable = true;
+                row.dataset.productId = product.id;
+                row.ondragstart = (event) => beginProductDrag(event, product.id);
+                row.ondragover = (event) => dragProductOver(event, row);
+                row.ondragleave = () => row.classList.remove('bg-[#14b8a6]/10');
+                row.ondrop = (event) => dropProduct(event, product.id);
+                row.ondragend = () => document.querySelectorAll('.product-row').forEach(item => item.classList.remove('bg-[#14b8a6]/10', 'opacity-40'));
                 
                 const badgeHtml = product.badge 
                     ? `<span class="text-[10px] px-2 py-0.5 rounded bg-[#0f766e]/20 text-[#14b8a6]">${product.badge}</span>` 
@@ -388,7 +396,9 @@
                         : `<span>${stock}</span>`;
 
                 row.innerHTML = `
-                    <td class="px-6 py-5 font-mono text-xs text-[#f5f0e6]/40">${product.id}</td>
+                    <td class="px-6 py-5 font-mono text-xs text-[#f5f0e6]/40">
+                        <span class="mr-2 cursor-grab text-[#14b8a6]" title="Drag to reorder" aria-label="Drag to reorder">⠿</span>${product.id}
+                    </td>
                     <td class="px-6 py-5">
                         <div class="font-medium">${product.title}</div>
                         <div class="text-xs text-[#f5f0e6]/50 line-clamp-1">${product.description?.substring(0, 70) || ''}...</div>
@@ -651,6 +661,59 @@
             product.is_active = !isActive;
             renderTable();
             showToast(product.is_active ? 'Product is active on the shop.' : 'Product is hidden from the shop.');
+        }
+
+        let draggedProductId = null;
+
+        function beginProductDrag(event, id) {
+            draggedProductId = id;
+            event.dataTransfer.effectAllowed = 'move';
+            event.dataTransfer.setData('text/plain', String(id));
+            event.currentTarget.classList.add('opacity-40');
+        }
+
+        function dragProductOver(event, row) {
+            event.preventDefault();
+            event.dataTransfer.dropEffect = 'move';
+            if (Number(row.dataset.productId) !== draggedProductId) row.classList.add('bg-[#14b8a6]/10');
+        }
+
+        async function dropProduct(event, targetId) {
+            event.preventDefault();
+            document.querySelectorAll('.product-row').forEach(item => item.classList.remove('bg-[#14b8a6]/10', 'opacity-40'));
+            if (!draggedProductId || draggedProductId === targetId) return;
+
+            const fromIndex = products.findIndex(product => product.id === draggedProductId);
+            const toIndex = products.findIndex(product => product.id === targetId);
+            if (fromIndex < 0 || toIndex < 0) return;
+
+            const [movedProduct] = products.splice(fromIndex, 1);
+            const insertIndex = fromIndex < toIndex ? toIndex - 1 : toIndex;
+            products.splice(insertIndex, 0, movedProduct);
+            products.forEach((product, index) => { product.sort_order = (index + 1) * 1000; });
+            renderTable();
+
+            const client = getSupabaseClient();
+            if (!client) {
+                alert('Supabase is not connected. Please reload and try again.');
+                return;
+            }
+
+            try {
+                const updates = await Promise.all(products.map(product => client
+                    .from('products')
+                    .update({ sort_order: product.sort_order })
+                    .eq('id', product.id)));
+                const failedUpdate = updates.find(result => result.error);
+                if (failedUpdate) throw failedUpdate.error;
+                showToast('Product order saved.');
+            } catch (error) {
+                console.error('Product order update failed:', error);
+                alert('Could not save the new order. Please reload and try again.');
+                await loadProducts();
+            } finally {
+                draggedProductId = null;
+            }
         }
 
         async function deleteProduct(id) {

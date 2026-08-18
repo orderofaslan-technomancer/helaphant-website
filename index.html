@@ -796,6 +796,7 @@
                     .from('products')
                     .select('*')
                     .eq('is_active', true)
+                    .order('sort_order', { ascending: true, nullsFirst: false })
                     .order('id', { ascending: true });
 
                 if (error) {
