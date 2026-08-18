@@ -836,11 +836,7 @@
             return Number(product.inventory_count) === 0;
         }
 
-        function renderProducts(filteredProducts) {
-            const grid = document.getElementById('product-grid');
-            grid.innerHTML = '';
-
-            filteredProducts.forEach(product => {
+        function createProductCard(product) {
                 const soldOut = isSoldOut(product);
                 const card = document.createElement('div');
                 card.className = `product-card surface border border-white/10 rounded-3xl overflow-hidden group ${soldOut ? 'opacity-70' : 'cursor-pointer'}`;
@@ -892,7 +888,50 @@
                 `;
                 
                 card.onclick = () => showProductModal(product.id);
-                grid.appendChild(card);
+                return card;
+        }
+
+        function categoryDisplayName(category) {
+            const names = {
+                wear: 'Wear It', prints: 'Art Prints', patches: 'Patches',
+                slaps: 'Slaps / Stickers', originals: 'Original Art', mags: 'Mags / Zines'
+            };
+            return names[category] || String(category || 'Products');
+        }
+
+        function renderProducts(filteredProducts) {
+            const grid = document.getElementById('product-grid');
+            grid.innerHTML = '';
+            const cardGridClass = 'grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6';
+
+            if (currentFilter === 'all') {
+                grid.className = `mt-12 ${cardGridClass}`;
+                filteredProducts.forEach(product => grid.appendChild(createProductCard(product)));
+                return;
+            }
+
+            grid.className = 'mt-12 space-y-14';
+            const groups = new Map();
+            filteredProducts.forEach(product => {
+                const series = String(product.series || '').trim();
+                const title = series || `Other ${categoryDisplayName(product.category)}`;
+                if (!groups.has(title)) groups.set(title, []);
+                groups.get(title).push(product);
+            });
+
+            groups.forEach((groupProducts, title) => {
+                const section = document.createElement('section');
+                section.innerHTML = `
+                    <div class="flex items-center gap-4 mb-5">
+                        <h2 class="font-semibold text-2xl tracking-wide">${title}</h2>
+                        <div class="h-px flex-1 bg-white/10"></div>
+                    </div>
+                `;
+                const cards = document.createElement('div');
+                cards.className = cardGridClass;
+                groupProducts.forEach(product => cards.appendChild(createProductCard(product)));
+                section.appendChild(cards);
+                grid.appendChild(section);
             });
         }
 
