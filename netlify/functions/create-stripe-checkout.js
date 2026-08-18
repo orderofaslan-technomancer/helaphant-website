@@ -37,9 +37,12 @@ function shippingForCart(cart) {
   const onlyFiveBySevenPrints = shippableItems.every(
     (item) => String(item.category || '').toLowerCase() === 'prints' && isFiveBySevenPrint(item)
   );
+  const onlyStickers = shippableItems.every(
+    (item) => String(item.category || '').toLowerCase() === 'slaps'
+  );
 
-  return onlyFiveBySevenPrints
-    ? { amount: 500, displayName: 'Standard shipping (5x7 prints)' }
+  return onlyFiveBySevenPrints || onlyStickers
+    ? { amount: 500, displayName: onlyStickers ? 'Standard shipping (stickers)' : 'Standard shipping (5x7 prints)' }
     : { amount: 700, displayName: 'Standard shipping' };
 }
 
