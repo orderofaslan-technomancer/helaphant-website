@@ -461,7 +461,7 @@
                     <div id="modal-variants" class="mt-8"></div>
 
                     <div class="mt-8 flex gap-3">
-                        <button onclick="addCurrentProductToCart()" 
+                        <button id="modal-add-to-cart" onclick="addCurrentProductToCart()"
                                 class="flex-1 py-4 rounded-2xl bg-[#0f766e] hover:bg-[#115e59] font-semibold text-sm tracking-wide transition-colors">
                             ADD TO CART
                         </button>
@@ -830,13 +830,18 @@
         let currentProduct = null;
         let currentFilter = 'all';
 
+        function isSoldOut(product) {
+            return Number(product.inventory_count) === 0;
+        }
+
         function renderProducts(filteredProducts) {
             const grid = document.getElementById('product-grid');
             grid.innerHTML = '';
 
             filteredProducts.forEach(product => {
+                const soldOut = isSoldOut(product);
                 const card = document.createElement('div');
-                card.className = `product-card surface border border-white/10 rounded-3xl overflow-hidden group cursor-pointer`;
+                card.className = `product-card surface border border-white/10 rounded-3xl overflow-hidden group ${soldOut ? 'opacity-70' : 'cursor-pointer'}`;
                 
                 card.innerHTML = `
                     <div class="relative h-72 bg-[#0a0a0a] flex items-center justify-center overflow-hidden">
@@ -847,6 +852,11 @@
                         ${product.badge ? `
                             <div class="absolute top-4 right-4 px-3 py-1 text-[10px] tracking-widest bg-[#0a0a0a]/90 border border-white/10 rounded-full">
                                 ${product.badge}
+                            </div>
+                        ` : ''}
+                        ${soldOut ? `
+                            <div class="absolute inset-0 flex items-center justify-center bg-black/55">
+                                <span class="px-4 py-2 text-xs font-semibold tracking-[3px] bg-[#0a0a0a] border border-white/20 rounded-full">SOLD OUT</span>
                             </div>
                         ` : ''}
                     </div>
@@ -863,10 +873,14 @@
                         </div>
                         
                         <div class="mt-5 flex gap-3">
-                            <button onclick="event.stopImmediatePropagation(); quickAddToCart(${product.id});" 
-                                    class="flex-1 text-sm py-2.5 border border-white/15 hover:bg-white/5 rounded-2xl transition-colors">
-                                Quick Add
-                            </button>
+                            ${soldOut ? `
+                                <div class="flex-1 text-center text-sm py-2.5 border border-red-500/30 text-red-300 rounded-2xl">Sold Out</div>
+                            ` : `
+                                <button onclick="event.stopImmediatePropagation(); quickAddToCart(${product.id});"
+                                        class="flex-1 text-sm py-2.5 border border-white/15 hover:bg-white/5 rounded-2xl transition-colors">
+                                    Quick Add
+                                </button>
+                            `}
                             <button onclick="event.stopImmediatePropagation(); showProductModal(${product.id});" 
                                     class="flex-1 text-sm py-2.5 bg-white/5 hover:bg-white/10 rounded-2xl transition-colors">
                                 View Details
@@ -957,6 +971,16 @@
             document.getElementById('modal-price').textContent = `$${options[0].price}`;
             document.getElementById('modal-category').textContent = product.category.toUpperCase();
             document.getElementById('modal-description').textContent = product.description;
+            const addToCartButton = document.getElementById('modal-add-to-cart');
+            if (isSoldOut(product)) {
+                addToCartButton.disabled = true;
+                addToCartButton.textContent = 'SOLD OUT';
+                addToCartButton.className = 'flex-1 py-4 rounded-2xl bg-white/10 text-[#f5f0e6]/45 font-semibold text-sm tracking-wide cursor-not-allowed';
+            } else {
+                addToCartButton.disabled = false;
+                addToCartButton.textContent = 'ADD TO CART';
+                addToCartButton.className = 'flex-1 py-4 rounded-2xl bg-[#0f766e] hover:bg-[#115e59] font-semibold text-sm tracking-wide transition-colors';
+            }
 
             renderProductGallery();
 
@@ -1004,14 +1028,14 @@
 
         function quickAddToCart(productId) {
             const product = products.find(p => p.id === productId);
-            if (!product) return;
+            if (!product || isSoldOut(product)) return;
 
             const option = getProductOptions(product)[0];
             addToCart(product, option.label, option.price);
         }
 
         function addCurrentProductToCart() {
-            if (!currentProduct) return;
+            if (!currentProduct || isSoldOut(currentProduct)) return;
 
             const option = getProductOptions(currentProduct)[0];
             const variant = currentProduct.selectedVariant || option.label;

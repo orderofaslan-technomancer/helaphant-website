@@ -146,6 +146,7 @@
                             <th class="px-6 py-4 font-normal">Product</th>
                             <th class="px-6 py-4 font-normal w-28">Category</th>
                             <th class="px-6 py-4 font-normal w-24 text-right">Price</th>
+                            <th class="px-6 py-4 font-normal w-24 text-right">Stock</th>
                             <th class="px-6 py-4 font-normal w-32">Image</th>
                             <th class="px-6 py-4 font-normal w-40">Actions</th>
                         </tr>
@@ -174,7 +175,7 @@
             </div>
 
             <div class="p-8 space-y-6">
-                <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+                <div class="grid grid-cols-1 md:grid-cols-3 gap-6">
                     <div>
                         <label class="block text-xs tracking-widest text-[#f5f0e6]/60 mb-2">TITLE</label>
                         <input id="form-title" type="text" class="admin-input w-full rounded-2xl px-4 py-3 text-sm">
@@ -182,6 +183,10 @@
                     <div>
                         <label class="block text-xs tracking-widest text-[#f5f0e6]/60 mb-2">PRICE (USD)</label>
                         <input id="form-price" type="number" class="admin-input w-full rounded-2xl px-4 py-3 text-sm">
+                    </div>
+                    <div>
+                        <label class="block text-xs tracking-widest text-[#f5f0e6]/60 mb-2">STOCK</label>
+                        <input id="form-stock" type="number" min="0" step="1" placeholder="Leave blank for unlimited" class="admin-input w-full rounded-2xl px-4 py-3 text-sm">
                     </div>
                 </div>
 
@@ -362,7 +367,7 @@
             tbody.innerHTML = '';
 
             if (products.length === 0) {
-                tbody.innerHTML = `<tr><td colspan="6" class="px-6 py-12 text-center text-[#f5f0e6]/50">No products yet. Add your first one above.</td></tr>`;
+                tbody.innerHTML = `<tr><td colspan="7" class="px-6 py-12 text-center text-[#f5f0e6]/50">No products yet. Add your first one above.</td></tr>`;
                 return;
             }
 
@@ -373,6 +378,12 @@
                 const badgeHtml = product.badge 
                     ? `<span class="text-[10px] px-2 py-0.5 rounded bg-[#0f766e]/20 text-[#14b8a6]">${product.badge}</span>` 
                     : '';
+                const stock = Number.isInteger(product.inventory_count) ? product.inventory_count : null;
+                const stockHtml = stock === null
+                    ? '<span class="text-[#f5f0e6]/40">Unlimited</span>'
+                    : stock === 0
+                        ? '<span class="text-red-400 font-semibold">Sold out</span>'
+                        : `<span>${stock}</span>`;
 
                 row.innerHTML = `
                     <td class="px-6 py-5 font-mono text-xs text-[#f5f0e6]/40">${product.id}</td>
@@ -384,6 +395,7 @@
                         <span class="text-xs uppercase tracking-widest px-3 py-1 rounded-full bg-white/5">${product.category}</span>
                     </td>
                     <td class="px-6 py-5 text-right font-mono">$${product.price}</td>
+                    <td class="px-6 py-5 text-right font-mono">${stockHtml}</td>
                     <td class="px-6 py-5">
                         <div class="w-12 h-12 bg-[#0a0a0a] rounded-2xl overflow-hidden border border-white/10">
                             <img src="${product.image}" class="w-full h-full object-cover" onerror="this.src='https://picsum.photos/id/1015/300/300'">
@@ -432,6 +444,7 @@
             // Clear form
             document.getElementById('form-title').value = '';
             document.getElementById('form-price').value = '';
+            document.getElementById('form-stock').value = '';
             document.getElementById('form-category').value = 'prints';
             document.getElementById('form-description').value = '';
             document.getElementById('form-image').value = '';
@@ -454,6 +467,7 @@
 
             document.getElementById('form-title').value = product.title;
             document.getElementById('form-price').value = product.price;
+            document.getElementById('form-stock').value = Number.isInteger(product.inventory_count) ? product.inventory_count : '';
             document.getElementById('form-category').value = product.category;
             document.getElementById('form-description').value = product.description || '';
             document.getElementById('form-image').value = product.image || '';
@@ -553,9 +567,17 @@
             const backupImage = document.getElementById('form-image').value.trim();
             if (productImages.length === 0 && backupImage) productImages = [backupImage];
 
+            const stockValue = document.getElementById('form-stock').value.trim();
+            const inventoryCount = stockValue === '' ? null : Number(stockValue);
+            if (inventoryCount !== null && (!Number.isInteger(inventoryCount) || inventoryCount < 0)) {
+                alert('Stock must be a whole number of zero or more. Leave it blank for unlimited.');
+                return;
+            }
+
             const productData = {
                 title: title,
                 price: parseFloat(document.getElementById('form-price').value) || 0,
+                inventory_count: inventoryCount,
                 category: document.getElementById('form-category').value,
                 description: document.getElementById('form-description').value.trim(),
                 image: productImages[0] || 'https://picsum.photos/id/1015/800/800',

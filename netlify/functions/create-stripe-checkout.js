@@ -1,4 +1,5 @@
 const stripe = require('stripe')(process.env.STRIPE_SECRET_KEY);
+const inventory = require('./inventory');
 
 function json(statusCode, body) {
   return {
@@ -42,6 +43,14 @@ function shippingForCart(cart) {
     : { amount: 700, displayName: 'Standard shipping' };
 }
 
+function priceForProduct(product, variant) {
+  if (product.category === 'prints') {
+    const printPrices = { '5 x 7': 1500, '8 x 10': 2000, '11 x 14': 2500 };
+    return printPrices[variant] || 1500;
+  }
+  return moneyCents(product.price);
+}
+
 exports.handler = async (event) => {
   if (event.httpMethod === 'OPTIONS') {
     return {
@@ -65,6 +74,7 @@ exports.handler = async (event) => {
     });
   }
 
+  let inventoryHold = null;
   try {
     const payload = JSON.parse(event.body || '{}');
     const {
@@ -99,12 +109,21 @@ exports.handler = async (event) => {
       }
     }
 
+    const requestedItems = inventory.normalizeItems(cart);
+    const liveProducts = await inventory.getProducts(requestedItems.map((item) => item.id));
+    const productsById = new Map(liveProducts.map((product) => [Number(product.id), product]));
+    if (productsById.size !== requestedItems.length) {
+      return json(400, { error: 'One or more items are no longer available.' });
+    }
+
+    const validatedCart = [];
     const lineItems = [];
     for (const item of cart) {
-      const title = String(item.title || 'Item').slice(0, 120);
+      const product = productsById.get(Number(item.id));
+      const title = String(product.title || 'Item').slice(0, 120);
       const variant = String(item.variant || 'One Size').slice(0, 60);
       const quantity = Math.max(1, Math.min(99, parseInt(item.quantity, 10) || 1));
-      let unitCents = moneyCents(item.price);
+      let unitCents = priceForProduct(product, variant);
 
       if (unitCents === null || unitCents < 50) {
         // Stripe minimum is typically $0.50 USD
@@ -128,7 +147,15 @@ exports.handler = async (event) => {
         },
         quantity,
       });
+      validatedCart.push({
+        id: Number(product.id), title, variant, quantity, category: product.category,
+        description: product.description || '', price: unitCents / 100,
+      });
     }
+
+    // Reserve stock while the buyer completes the 30-minute Stripe checkout.
+    // The webhook confirms the sale or releases this hold when checkout expires.
+    inventoryHold = await inventory.reserve(requestedItems);
 
     const successUrl =
       process.env.STRIPE_SUCCESS_URL ||
@@ -137,10 +164,11 @@ exports.handler = async (event) => {
       process.env.STRIPE_CANCEL_URL ||
       'https://helaphant.com/?checkout=cancel';
 
-    const shipping = shippingForCart(cart);
+    const shipping = shippingForCart(validatedCart);
 
     const session = await stripe.checkout.sessions.create({
       mode: 'payment',
+      expires_at: Math.floor(new Date(inventoryHold.expiresAt).getTime() / 1000),
       payment_method_types: ['card'],
       line_items: lineItems,
       success_url: successUrl,
@@ -164,11 +192,12 @@ exports.handler = async (event) => {
       },
       billing_address_collection: 'auto',
       metadata: {
+        inventory_hold_id: inventoryHold.holdId,
         customer_name: name.slice(0, 200),
         notes: String(notes || '').slice(0, 450),
         discount_code: discountCode,
         discount_percent: String(discountPercent || 0),
-        cart_summary: cart
+        cart_summary: validatedCart
           .map((i) => `${i.title} x${i.quantity}`)
           .join(', ')
           .slice(0, 450),
@@ -185,11 +214,16 @@ exports.handler = async (event) => {
 
     return json(200, { id: session.id, url: session.url });
   } catch (error) {
+    if (inventoryHold) {
+      try { await inventory.release(inventoryHold.holdId); } catch (releaseError) { console.error('Inventory hold release failed:', releaseError); }
+    }
     console.error('Stripe checkout error:', error);
     const msg = (error && error.message) ? error.message : '';
     let friendly = 'Failed to create checkout session';
     if (/api key|invalid api key|no api key/i.test(msg)) {
       friendly = 'Stripe secret not configured or invalid (check Netlify STRIPE_SECRET_KEY)';
+    } else if (/sold out|not enough inventory|no longer available/i.test(msg)) {
+      friendly = 'Sorry, that item just sold out. Please refresh the shop and try again.';
     } else if (msg) {
       // Surface useful Stripe validation messages without leaking secrets
       friendly = msg.slice(0, 180);
