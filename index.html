@@ -492,11 +492,7 @@
                 <!-- Populated by JS -->
             </div>
 
-            <form name="order" method="POST" data-netlify="true" netlify class="p-8 border-t border-white/10" onsubmit="handleOrderSubmit(event)">
-                <input type="hidden" name="form-name" value="order" />
-                <!-- Honeypot for spam bots (Netlify) -->
-                <input type="text" name="bot-field" class="hidden" tabindex="-1" autocomplete="off" />
-
+            <form id="checkout-details" class="p-8 border-t border-white/10" onsubmit="event.preventDefault(); initiateStripeCheckout()">
                 <div class="space-y-3 mb-6">
                     <input type="text" name="name" placeholder="Your name" required 
                            class="w-full bg-[#0a0a0a] border border-white/15 rounded-2xl px-4 py-2 text-sm placeholder:text-[#f5f0e6]/40">
@@ -511,21 +507,14 @@
                     <span id="cart-total">$0</span>
                 </div>
 
-                <!-- Hidden cart summary populated by JS -->
-                <input type="hidden" name="cart" id="cart-summary">
-
                 <button type="submit" 
-                        class="w-full py-4 bg-[#14b8a6] hover:bg-[#d4b17f] text-[#0a0a0a] font-semibold rounded-2xl transition-all mb-3">
-                    CHECKOUT — COLLECT ORDER (EMAIL)
-                </button>
-
-                <button type="button" id="stripe-pay-btn" onclick="initiateStripeCheckout()"
-                        class="w-full py-4 border border-[#14b8a6] hover:bg-[#14b8a6]/10 text-[#14b8a6] font-semibold rounded-2xl transition-all">
-                    PAY WITH CARD
+                        id="stripe-pay-btn"
+                        class="w-full py-4 bg-[#14b8a6] hover:bg-[#d4b17f] text-[#0a0a0a] font-semibold rounded-2xl transition-all">
+                    CHECKOUT WITH STRIPE
                 </button>
                 
                 <div class="text-center text-[10px] text-[#f5f0e6]/40 mt-4">
-                    Card payments are secure via Stripe. Email order is a backup if you prefer to pay later.
+                    Secure card payment via Stripe.
                 </div>
             </form>
         </div>
@@ -1208,18 +1197,6 @@
 
             totalEl.innerHTML = `$${displayTotal}${discountNote}`;
 
-            // Update hidden form field for Netlify (include discount info)
-            const summaryField = document.getElementById('cart-summary');
-            if (summaryField) {
-                let summary = cart.map(item => `${item.title} (${item.variant}) x${item.quantity} — $${item.price * item.quantity}`).join('\n');
-                if (window.currentDiscount) {
-                    summary += `\n\nDiscount: ${window.currentDiscount.code} (-${window.currentDiscount.percent}%)`;
-                    summary += `\nOriginal: $${total} → Final: $${displayTotal}`;
-                } else {
-                    summary += `\n\nTotal: $${total}`;
-                }
-                summaryField.value = summary;
-            }
         }
 
         function changeCartQuantity(index, delta) {
@@ -1237,136 +1214,6 @@
             cart.splice(index, 1);
             updateCartCount();
             renderCartItems();
-        }
-
-        // Order / Checkout form - now properly submits to Netlify Forms
-        /*
-          ORDER FORM SETUP (Netlify + Supabase):
-
-          1. Netlify Forms will automatically capture "order" submissions after deploy.
-             Submissions appear under Forms in Netlify dashboard.
-             Set up email notifications there (same as newsletter).
-
-          2. Recommended: Create this table in Supabase for persistent order records:
-             create table if not exists orders (
-               id uuid default gen_random_uuid() primary key,
-               name text,
-               email text not null,
-               notes text,
-               cart_summary text,
-               total numeric,
-               status text default 'new',
-               created_at timestamptz default now()
-             );
-             alter table orders enable row level security;
-             create policy "public can insert orders" on orders 
-               for insert to anon with check (true);
-
-          3. After orders come in, you can view them in Supabase Table Editor or in the Netlify Forms dashboard.
-        */
-        async function handleOrderSubmit(e) {
-            e.preventDefault();
-
-            const form = e.target;
-            const total = cart.reduce((sum, item) => sum + item.price * item.quantity, 0);
-            const formData = new FormData(form);
-
-            // Honeypot check
-            const honeypot = form.querySelector('input[name="bot-field"]');
-            if (honeypot && honeypot.value) {
-                console.warn('Honeypot triggered on order form — possible spam');
-                return;
-            }
-
-            const submitBtn = form.querySelector('button[type="submit"]');
-            const originalBtnText = submitBtn ? submitBtn.innerHTML : 'SUBMIT';
-            if (submitBtn) {
-                submitBtn.innerHTML = 'SUBMITTING...';
-                submitBtn.disabled = true;
-            }
-
-            console.log('Order form data:', Object.fromEntries(formData));
-
-            try {
-                // 1. Submit to Netlify Forms (the real email capture on deploy)
-                const response = await fetch("/", {
-                    method: "POST",
-                    headers: { "Content-Type": "application/x-www-form-urlencoded" },
-                    body: new URLSearchParams(formData).toString()
-                });
-
-                if (!response.ok) {
-                    throw new Error('Netlify order form submission failed');
-                }
-
-                // 2. Also save to Supabase 'orders' table (for your own admin visibility)
-                const client = getSupabaseClient();
-                if (client) {
-                    try {
-                        const orderData = {
-                            name: formData.get('name'),
-                            email: formData.get('email'),
-                            notes: formData.get('notes') || '',
-                            cart_summary: formData.get('cart'),
-                            total: total,
-                            status: 'new'
-                        };
-                        const { error } = await client.from('orders').insert([orderData]);
-                        if (error) {
-                            console.warn('Could not save order to Supabase (create "orders" table if needed):', error);
-                        } else {
-                            console.log('Order also saved to Supabase.');
-                        }
-                    } catch (err) {
-                        console.warn('Supabase order save failed (non-critical):', err);
-                    }
-                }
-
-                // Success UI
-                if (submitBtn) submitBtn.innerHTML = 'ORDER RECEIVED ✓';
-
-                // Clear cart and close
-                cart = [];
-                updateCartCount();
-                closeCart();
-
-                setTimeout(() => {
-                    const successMsg = document.createElement('div');
-                    successMsg.className = 'fixed bottom-8 left-1/2 -translate-x-1/2 bg-[#111] border border-white/10 px-6 py-4 rounded-2xl text-sm shadow-2xl z-[90] max-w-sm text-center';
-                    successMsg.innerHTML = `
-                        <div class="font-medium text-[#14b8a6]">Order received!</div>
-                        <div class="text-[#f5f0e6]/70 mt-1 text-xs">We'll email you shortly to confirm and arrange payment.</div>
-                    `;
-                    document.body.appendChild(successMsg);
-
-                    setTimeout(() => {
-                        if (successMsg.parentElement) successMsg.parentElement.removeChild(successMsg);
-                    }, 5500);
-
-                    form.reset();
-                    if (submitBtn) {
-                        submitBtn.innerHTML = originalBtnText;
-                        submitBtn.disabled = false;
-                    }
-                }, 400);
-
-            } catch (err) {
-                console.error('Order submission error:', err);
-
-                // Fallback for local / offline
-                cart = [];
-                updateCartCount();
-                closeCart();
-
-                setTimeout(() => {
-                    alert(`Thank you! Order received (demo mode).\n\nName: ${formData.get('name')}\nWe'll email you to confirm details.`);
-                    form.reset();
-                    if (submitBtn) {
-                        submitBtn.innerHTML = originalBtnText;
-                        submitBtn.disabled = false;
-                    }
-                }, 300);
-            }
         }
 
         function showCheckoutToast(title, detail, isError) {
@@ -1393,8 +1240,10 @@
                 try { localStorage.removeItem('hel_cart'); } catch (e) {}
                 showCheckoutToast(
                     'Payment received — thank you!',
-                    "You'll get a Stripe receipt by email. We'll follow up about shipping & fulfillment."
+                    "You'll get a Stripe receipt by email."
                 );
+                const sessionId = params.get('session_id');
+                if (sessionId) showDigitalDownloads(sessionId);
             } else if (status === 'cancel') {
                 showCheckoutToast(
                     'Checkout canceled',
@@ -1410,6 +1259,34 @@
             }
         }
 
+        async function showDigitalDownloads(sessionId) {
+            try {
+                const response = await fetch(`/.netlify/functions/get-digital-downloads?session_id=${encodeURIComponent(sessionId)}`);
+                const data = await response.json().catch(() => ({}));
+                if (!response.ok || !Array.isArray(data.downloads) || data.downloads.length === 0) return;
+
+                const panel = document.createElement('div');
+                panel.className = 'fixed bottom-8 left-1/2 -translate-x-1/2 bg-[#111] border border-[#14b8a6]/50 px-6 py-5 rounded-2xl text-sm shadow-2xl z-[90] max-w-sm w-[calc(100%-2rem)]';
+                const title = document.createElement('div');
+                title.className = 'font-medium text-[#14b8a6] text-center';
+                title.textContent = 'Your download is ready';
+                panel.appendChild(title);
+
+                data.downloads.forEach((download) => {
+                    const link = document.createElement('a');
+                    link.href = download.url;
+                    link.target = '_blank';
+                    link.rel = 'noopener';
+                    link.className = 'block mt-3 text-center underline decoration-[#14b8a6] underline-offset-4 hover:text-[#14b8a6]';
+                    link.textContent = `Download ${download.title}`;
+                    panel.appendChild(link);
+                });
+                document.body.appendChild(panel);
+            } catch (error) {
+                console.warn('Could not load digital downloads:', error);
+            }
+        }
+
         async function initiateStripeCheckout() {
             const total = cart.reduce((sum, item) => sum + item.price * item.quantity, 0);
             if (total <= 0 || cart.length === 0) {
@@ -1417,8 +1294,8 @@
                 return;
             }
 
-            // Collect + validate customer info from the form
-            const form = document.querySelector('form[name="order"]');
+            // Collect + validate customer info from the Stripe checkout form.
+            const form = document.getElementById('checkout-details');
             const nameInput = form ? form.querySelector('input[name="name"]') : null;
             const emailInput = form ? form.querySelector('input[name="email"]') : null;
             const notesInput = form ? form.querySelector('textarea[name="notes"]') : null;
@@ -1439,7 +1316,7 @@
             }
 
             const payBtn = document.getElementById('stripe-pay-btn');
-            const originalBtnText = payBtn ? payBtn.innerHTML : 'PAY WITH CARD';
+            const originalBtnText = payBtn ? payBtn.innerHTML : 'CHECKOUT WITH STRIPE';
             if (payBtn) {
                 payBtn.innerHTML = 'OPENING SECURE CHECKOUT...';
                 payBtn.disabled = true;
@@ -1496,7 +1373,7 @@
                 throw new Error('No checkout URL returned from payment server');
             } catch (err) {
                 console.error('Stripe checkout error:', err);
-                alert(`Payment setup error: ${err.message}\n\nYou can still use "CHECKOUT — COLLECT ORDER (EMAIL)" and we'll arrange payment with you.`);
+                alert(`Payment setup error: ${err.message}\n\nPlease try again in a moment.`);
                 if (payBtn) {
                     payBtn.innerHTML = originalBtnText;
                     payBtn.disabled = false;

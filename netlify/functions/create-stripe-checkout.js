@@ -26,10 +26,22 @@ function isFiveBySevenPrint(item) {
   return /5\s*(?:x|×|by)\s*7/.test(text);
 }
 
+function isDigitalProduct(item) {
+  return item.is_digital === true;
+}
+
+function cartRequiresShipping(cart) {
+  return cart.some((item) => !isDigitalProduct(item));
+}
+
 function shippingForCart(cart) {
-  // Original art is priced with shipping included. For all other items,
+  // Digital products do not need shipping. Original art is priced with shipping included. For all other items,
   // a 5x7 print ships for $5; larger prints and regular merchandise ship for $7.
-  const shippableItems = cart.filter((item) => String(item.category || '').toLowerCase() !== 'originals');
+  const physicalItems = cart.filter((item) => !isDigitalProduct(item));
+  if (physicalItems.length === 0) {
+    return { amount: 0, displayName: 'No shipping required' };
+  }
+  const shippableItems = physicalItems.filter((item) => String(item.category || '').toLowerCase() !== 'originals');
   if (shippableItems.length === 0) {
     return { amount: 0, displayName: 'Shipping included with original art' };
   }
@@ -128,6 +140,10 @@ exports.handler = async (event) => {
       const quantity = Math.max(1, Math.min(99, parseInt(item.quantity, 10) || 1));
       let unitCents = priceForProduct(product, variant);
 
+      if (product.is_digital === true && !product.digital_file_path) {
+        return json(400, { error: `The digital download for "${title}" is not ready yet.` });
+      }
+
       if (unitCents === null || unitCents < 50) {
         // Stripe minimum is typically $0.50 USD
         return json(400, { error: `Invalid price for "${title}"` });
@@ -153,6 +169,7 @@ exports.handler = async (event) => {
       validatedCart.push({
         id: Number(product.id), title, variant, quantity, category: product.category,
         description: product.description || '', price: unitCents / 100,
+        is_digital: product.is_digital === true,
       });
     }
 
@@ -168,6 +185,7 @@ exports.handler = async (event) => {
       'https://helaphant.com/?checkout=cancel';
 
     const shipping = shippingForCart(validatedCart);
+    const requiresShipping = cartRequiresShipping(validatedCart);
 
     const session = await stripe.checkout.sessions.create({
       mode: 'payment',
@@ -178,18 +196,17 @@ exports.handler = async (event) => {
       cancel_url: cancelUrl,
       customer_email: email,
       client_reference_id: name.slice(0, 200),
-      // Collect ship-to address. Expand this list anytime you ship more places.
-      shipping_address_collection: {
-        // Flat shipping rates below are for domestic orders only.
-        allowed_countries: ['US'],
-      },
-      shipping_options: [{
-        shipping_rate_data: {
-          type: 'fixed_amount',
-          fixed_amount: { amount: shipping.amount, currency: 'usd' },
-          display_name: shipping.displayName,
-        },
-      }],
+      ...(requiresShipping ? {
+        // Collect ship-to address only when the cart includes a physical item.
+        shipping_address_collection: { allowed_countries: ['US'] },
+        shipping_options: [{
+          shipping_rate_data: {
+            type: 'fixed_amount',
+            fixed_amount: { amount: shipping.amount, currency: 'usd' },
+            display_name: shipping.displayName,
+          },
+        }],
+      } : {}),
       phone_number_collection: {
         enabled: true,
       },
@@ -200,6 +217,7 @@ exports.handler = async (event) => {
         notes: String(notes || '').slice(0, 450),
         discount_code: discountCode,
         discount_percent: String(discountPercent || 0),
+        digital_product_ids: [...new Set(validatedCart.filter((item) => item.is_digital).map((item) => item.id))].join(','),
         cart_summary: validatedCart
           .map((i) => `${i.title} x${i.quantity}`)
           .join(', ')

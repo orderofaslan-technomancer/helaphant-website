@@ -36,7 +36,24 @@ function normalizeItems(cart) {
 
 async function getProducts(ids) {
   const list = ids.join(',');
-  return request(`/rest/v1/products?select=id,title,category,price,description,inventory_count,is_active&id=in.(${list})&is_active=eq.true`);
+  return request(`/rest/v1/products?select=id,title,category,price,description,inventory_count,is_active,is_digital,digital_file_path&id=in.(${list})&is_active=eq.true`);
+}
+
+async function getDigitalProducts(ids) {
+  const list = ids.map(Number).filter(Number.isInteger).join(',');
+  if (!list) return [];
+  return request(`/rest/v1/products?select=id,title,is_digital,digital_file_path&id=in.(${list})`);
+}
+
+async function createSignedDownloadUrl(filePath) {
+  const encodedPath = String(filePath).split('/').map(encodeURIComponent).join('/');
+  const result = await request(`/storage/v1/object/sign/digital-downloads/${encodedPath}`, {
+    method: 'POST',
+    body: JSON.stringify({ expiresIn: 3600 }),
+  });
+  if (!result?.signedURL) throw new Error('Could not create download link.');
+  const { url } = config();
+  return `${url}/storage/v1${result.signedURL}`;
 }
 
 async function callRpc(name, payload) {
@@ -62,4 +79,4 @@ async function release(holdId) {
   return callRpc('release_inventory_hold', { p_hold_id: holdId });
 }
 
-module.exports = { normalizeItems, getProducts, reserve, confirm, release };
+module.exports = { normalizeItems, getProducts, getDigitalProducts, createSignedDownloadUrl, reserve, confirm, release };
