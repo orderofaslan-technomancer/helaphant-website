@@ -117,7 +117,7 @@
 
         /* Keep long product details inside the pop-up rather than scrolling the page beneath it. */
         .product-modal-backdrop {
-            overflow-y: auto;
+            overflow: hidden;
             overscroll-behavior: contain;
         }
 
@@ -125,6 +125,14 @@
             max-height: calc(100dvh - 2rem);
             overflow-y: auto;
             overscroll-behavior: contain;
+            -webkit-overflow-scrolling: touch;
+            touch-action: pan-y;
+        }
+
+        @media (max-width: 767px) {
+            .product-modal-panel {
+                max-height: calc(100dvh - 1.5rem);
+            }
         }
 
         @keyframes modalPop {
@@ -262,9 +270,9 @@
                     WHIMSICAL • MENACE
                 </div>
 
-                <div class="flex items-center gap-x-6 mb-4">
-                    <img src="images/logo.png" alt="Helaphant Logo" class="h-40 md:h-48 w-auto object-contain transition-transform duration-300 hover:scale-110">
-                    <h1 class="heading-serif text-[92px] md:text-[110px] leading-[0.88] tracking-[-6.2px]">
+                <div class="flex flex-col sm:flex-row sm:items-center gap-4 sm:gap-x-6 mb-4">
+                    <img src="images/logo.png" alt="Helaphant Logo" class="h-28 sm:h-40 md:h-48 w-auto object-contain transition-transform duration-300 hover:scale-110">
+                    <h1 class="heading-serif text-[56px] sm:text-[82px] md:text-[110px] leading-[0.88] tracking-[-3px] sm:tracking-[-5px] md:tracking-[-6.2px]">
                         WAR<br>HELAPHANT
                     </h1>
                 </div>
@@ -475,13 +483,13 @@
 
     <!-- Product Modal -->
     <div id="product-modal" onclick="if (event.target.id === 'product-modal') closeProductModal()" 
-         class="product-modal-backdrop hidden fixed inset-0 bg-black/90 z-[70] flex items-start justify-center p-4 md:items-center">
+         class="product-modal-backdrop hidden fixed inset-0 bg-black/90 z-[70] flex items-center justify-center p-3 md:p-4">
         <div onclick="event.stopImmediatePropagation()" 
              class="product-modal-panel modal surface border border-white/10 w-full max-w-4xl rounded-3xl">
             
             <div class="grid md:grid-cols-5">
                 <!-- Image side -->
-                <div id="modal-image" class="md:col-span-3 bg-[#0a0a0a] h-80 md:h-full min-h-[320px] relative flex items-center justify-center">
+                <div id="modal-image" class="md:col-span-3 bg-[#0a0a0a] h-56 sm:h-72 md:h-full min-h-[224px] md:min-h-[320px] relative flex items-center justify-center">
                     <!-- Populated dynamically -->
                 </div>
 
@@ -880,7 +888,7 @@
                 
                 card.innerHTML = `
                     <div class="relative h-72 bg-[#0a0a0a] flex items-center justify-center overflow-hidden">
-                        <img src="${product.image}" alt="${product.title}" 
+                        <img src="${product.image}" alt="${product.title}" loading="lazy" decoding="async"
                              class="max-h-[260px] object-contain group-hover:scale-105 transition-transform duration-700"
                              onerror="this.src='https://picsum.photos/id/1015/600/600'">
                         
@@ -973,7 +981,7 @@
             });
         }
 
-        function filterByCategory(category) {
+        function filterByCategory(category, shouldUpdateUrl = true) {
             currentFilter = category;
             
             const filtered = category === 'all' 
@@ -981,6 +989,7 @@
                 : products.filter(p => p.category === category);
             
             renderProducts(filtered);
+            if (shouldUpdateUrl) syncCategoryUrl(category);
             
             // Scroll to shop
             document.getElementById('shop').scrollIntoView({ behavior: 'smooth', block: 'start' });
@@ -989,7 +998,16 @@
         function showAllProducts() {
             currentFilter = 'all';
             renderProducts(products);
+            syncCategoryUrl('all');
             document.getElementById('shop').scrollIntoView({ behavior: 'smooth' });
+        }
+
+        function showFeaturedProducts() {
+            currentFilter = 'all';
+            // A smaller first gallery keeps the landing page light on phones.
+            // The full catalog remains one tap away through Browse Full Collection
+            // or the All Work category.
+            renderProducts(products.slice(0, 8));
         }
 
         const standardPrintSizes = [
@@ -1073,6 +1091,15 @@
             const url = new URL(window.location.href);
             if (!url.searchParams.has('product')) return;
             url.searchParams.delete('product');
+            window.history.replaceState({}, document.title, `${url.pathname}${url.search}${url.hash}`);
+        }
+
+        function syncCategoryUrl(category) {
+            if (!window.history?.replaceState) return;
+            const url = new URL(window.location.href);
+            url.searchParams.delete('product');
+            if (category && category !== 'all') url.searchParams.set('category', category);
+            else url.searchParams.delete('category');
             window.history.replaceState({}, document.title, `${url.pathname}${url.search}${url.hash}`);
         }
 
@@ -1659,8 +1686,12 @@
             // Load products (Supabase primary)
             products = await loadProducts();
 
-            // Render products
-            renderProducts(products);
+            // Start with a quick, curated preview instead of requesting every
+            // product image on the landing page at once.
+            showFeaturedProducts();
+            const sharedCategory = new URLSearchParams(window.location.search).get('category');
+            const allowedCategories = new Set(['wear', 'prints', 'patches', 'slaps', 'originals', 'mags', 'portraits']);
+            if (allowedCategories.has(sharedCategory)) filterByCategory(sharedCategory, false);
             const sharedProductId = Number(new URLSearchParams(window.location.search).get('product'));
             if (Number.isInteger(sharedProductId)) showProductModal(sharedProductId, false);
             
