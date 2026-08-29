@@ -201,6 +201,7 @@
                             <option value="slaps">Slaps / Stickers</option>
                             <option value="originals">Original Art</option>
                             <option value="mags">Mags / Zines</option>
+                            <option value="portraits">Pet Portrait Commissions</option>
                         </select>
                     </div>
                     <div>
@@ -250,7 +251,7 @@
                     <label class="block text-xs tracking-widest text-[#f5f0e6]/60 mb-2">VARIANTS (comma separated)</label>
                     <input id="form-variants" type="text" placeholder="S, M, L, XL" 
                            class="admin-input w-full rounded-2xl px-4 py-3 text-sm">
-                    <div class="text-[10px] text-[#f5f0e6]/40 mt-1">Example: S, M, L, XL &nbsp;&nbsp;or&nbsp;&nbsp; Standard, Signed</div>
+                    <div class="text-[10px] text-[#f5f0e6]/40 mt-1">Example: S, M, L, XL &nbsp;&nbsp;or&nbsp;&nbsp; Standard, Signed. For Pet Portraits: 5 x 7 | 55, 8 x 10 | 105, 11 x 14 | 120</div>
                 </div>
             </div>
 
@@ -519,7 +520,9 @@
             document.getElementById('form-series').value = product.series || '';
             document.getElementById('form-badge').value = product.badge || '';
             document.getElementById('form-is-digital').checked = product.is_digital === true;
-            document.getElementById('form-variants').value = (product.variants || []).join(', ');
+            document.getElementById('form-variants').value = (product.variants || [])
+                .map(variant => typeof variant === 'object' ? `${variant.label} | ${variant.price}` : variant)
+                .join(', ');
             productImages = [...new Set([...(Array.isArray(product.images) ? product.images : []), product.image].filter(Boolean))];
             digitalFilePath = product.digital_file_path || '';
             document.getElementById('form-digital-file').value = '';
@@ -647,11 +650,25 @@
                 return;
             }
 
+            const category = document.getElementById('form-category').value;
+            const rawVariants = document.getElementById('form-variants').value.split(',').map(v => v.trim()).filter(Boolean);
+            const variants = category === 'portraits'
+                ? rawVariants.map(variant => {
+                    const [label, price] = variant.split('|').map(part => part.trim());
+                    return { label, price: Number(String(price || '').replace(/\$/g, '')) };
+                }).filter(variant => variant.label && Number.isFinite(variant.price) && variant.price > 0)
+                : rawVariants;
+
+            if (category === 'portraits' && variants.length === 0) {
+                alert('Add portrait sizes and prices like: 5 x 7 | 55, 8 x 10 | 105');
+                return;
+            }
+
             const productData = {
                 title: title,
                 price: parseFloat(document.getElementById('form-price').value) || 0,
                 inventory_count: inventoryCount,
-                category: document.getElementById('form-category').value,
+                category,
                 description: document.getElementById('form-description').value.trim(),
                 image: productImages[0] || 'https://picsum.photos/id/1015/800/800',
                 images: productImages,
@@ -659,7 +676,7 @@
                 is_digital: isDigital,
                 digital_file_path: isDigital ? digitalFilePath : null,
                 badge: document.getElementById('form-badge').value.trim() || null,
-                variants: document.getElementById('form-variants').value.split(',').map(v => v.trim()).filter(Boolean)
+                variants
             };
 
             try {

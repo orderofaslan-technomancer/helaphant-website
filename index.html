@@ -898,7 +898,7 @@
                         <div class="flex justify-between items-baseline">
                             <div>
                                 <div class="font-semibold text-lg leading-tight">${product.title}</div>
-                                <div class="text-xs uppercase tracking-widest text-[#14b8a6] mt-0.5">${product.category.toUpperCase()}</div>
+                                <div class="text-xs uppercase tracking-widest text-[#14b8a6] mt-0.5">${categoryDisplayName(product.category)}</div>
                             </div>
                             <div class="text-right">
                                 <div class="font-mono text-xl font-medium">$${product.price}</div>
@@ -929,7 +929,8 @@
         function categoryDisplayName(category) {
             const names = {
                 wear: 'Wear It', prints: 'Art Prints', patches: 'Patches',
-                slaps: 'Slaps / Stickers', originals: 'Original Art', mags: 'Mags / Zines'
+                slaps: 'Slaps / Stickers', originals: 'Original Art', mags: 'Mags / Zines',
+                portraits: 'Pet Portrait Commissions'
             };
             return names[category] || String(category || 'Products');
         }
@@ -997,7 +998,12 @@
 
         function getProductOptions(product) {
             if (product.category === 'prints') return standardPrintSizes;
-            return (product.variants || ['One Size']).map(label => ({ label, price: product.price }));
+            return (product.variants || ['One Size']).map(variant => {
+                if (variant && typeof variant === 'object') {
+                    return { label: variant.label, price: Number(variant.price) };
+                }
+                return { label: variant, price: product.price };
+            });
         }
 
         function getProductImages(product) {
@@ -1064,7 +1070,7 @@
             // Populate modal
             document.getElementById('modal-title').textContent = product.title;
             document.getElementById('modal-price').textContent = `$${options[0].price}`;
-            document.getElementById('modal-category').textContent = product.category.toUpperCase();
+            document.getElementById('modal-category').textContent = categoryDisplayName(product.category).toUpperCase();
             document.getElementById('modal-description').textContent = product.description;
             const addToCartButton = document.getElementById('modal-add-to-cart');
             if (isSoldOut(product)) {
@@ -1087,7 +1093,7 @@
                     ${options.map((option, i) => `
                         <button onclick="selectVariant(this, '${option.label}', ${option.price})"
                                 class="variant-btn px-5 py-2 text-sm border ${i === 0 ? 'border-[#14b8a6] bg-white/5' : 'border-white/15'} hover:border-[#14b8a6] rounded-2xl transition-colors">
-                            ${option.label}${product.category === 'prints' ? ` — $${option.price}` : ''}
+                            ${option.label}${['prints', 'portraits'].includes(product.category) ? ` — $${option.price}` : ''}
                         </button>
                     `).join('')}
                 </div>
@@ -1334,16 +1340,21 @@
             if (!status) return;
 
             if (status === 'success') {
+                const includesPetPortrait = sessionStorage.getItem('hel_pending_pet_portrait_order') === 'true';
                 cart = [];
                 updateCartCount();
                 try { localStorage.removeItem('hel_cart'); } catch (e) {}
                 showCheckoutToast(
                     'Payment received — thank you!',
-                    "You'll get a Stripe receipt by email."
+                    includesPetPortrait
+                        ? "Helaphant will email you shortly to request your favorite pet photos. Please allow up to two weeks after we receive your references for completion."
+                        : "You'll get a Stripe receipt by email."
                 );
+                try { sessionStorage.removeItem('hel_pending_pet_portrait_order'); } catch (e) {}
                 const sessionId = params.get('session_id');
                 if (sessionId) showDigitalDownloads(sessionId);
             } else if (status === 'cancel') {
+                try { sessionStorage.removeItem('hel_pending_pet_portrait_order'); } catch (e) {}
                 showCheckoutToast(
                     'Checkout canceled',
                     'No charge was made. Your cart is still here when you\'re ready.',
@@ -1456,8 +1467,14 @@
                 console.log('[Stripe] Session created:', data);
 
                 // Hosted Checkout URL is the most reliable path
-                if (data.url) {
-                    window.location.href = data.url;
+                    if (data.url) {
+                        try {
+                            sessionStorage.setItem(
+                                'hel_pending_pet_portrait_order',
+                                cart.some(item => item.category === 'portraits') ? 'true' : 'false'
+                            );
+                        } catch (e) {}
+                        window.location.href = data.url;
                     return;
                 }
 

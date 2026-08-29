@@ -52,9 +52,17 @@ function shippingForCart(cart) {
   const onlyStickers = shippableItems.every(
     (item) => String(item.category || '').toLowerCase() === 'slaps'
   );
+  const onlyPetPortraits = shippableItems.every(
+    (item) => String(item.category || '').toLowerCase() === 'portraits'
+  );
 
-  return onlyFiveBySevenPrints || onlyStickers
-    ? { amount: 500, displayName: onlyStickers ? 'Standard shipping (stickers)' : 'Standard shipping (5x7 prints)' }
+  return onlyFiveBySevenPrints || onlyStickers || onlyPetPortraits
+    ? {
+      amount: 500,
+      displayName: onlyPetPortraits
+        ? 'Standard shipping (pet portraits)'
+        : onlyStickers ? 'Standard shipping (stickers)' : 'Standard shipping (5x7 prints)',
+    }
     : { amount: 700, displayName: 'Standard shipping' };
 }
 
@@ -62,6 +70,12 @@ function priceForProduct(product, variant) {
   if (product.category === 'prints') {
     const printPrices = { '5 x 7': 1500, '8 x 10': 2000, '11 x 14': 2500 };
     return printPrices[variant] || 1500;
+  }
+  if (product.category === 'portraits') {
+    const option = Array.isArray(product.variants)
+      ? product.variants.find((item) => item && typeof item === 'object' && item.label === variant)
+      : null;
+    return option ? moneyCents(option.price) : null;
   }
   return moneyCents(product.price);
 }
