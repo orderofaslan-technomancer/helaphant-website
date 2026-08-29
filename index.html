@@ -1000,11 +1000,28 @@
 
         function getProductOptions(product) {
             if (product.category === 'prints') return standardPrintSizes;
-            return (product.variants || ['One Size']).map(variant => {
-                if (variant && typeof variant === 'object') {
-                    return { label: variant.label, price: Number(variant.price) };
+
+            // Older catalog entries may have variants stored as JSON text rather
+            // than an already-parsed list. Normalize both formats so every
+            // existing product can still open its purchase panel.
+            let variants = product.variants;
+            if (typeof variants === 'string') {
+                try {
+                    variants = JSON.parse(variants);
+                } catch (_) {
+                    variants = variants.split(',').map(value => value.trim()).filter(Boolean);
                 }
-                return { label: variant, price: product.price };
+            }
+            if (!Array.isArray(variants) || variants.length === 0) variants = ['One Size'];
+
+            return variants.map(variant => {
+                if (variant && typeof variant === 'object') {
+                    return {
+                        label: String(variant.label || 'One Size'),
+                        price: Number.isFinite(Number(variant.price)) ? Number(variant.price) : Number(product.price)
+                    };
+                }
+                return { label: String(variant || 'One Size'), price: Number(product.price) };
             });
         }
 
