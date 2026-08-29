@@ -548,6 +548,8 @@
                               class="w-full bg-[#0a0a0a] border border-white/15 rounded-2xl px-4 py-2 text-sm placeholder:text-[#f5f0e6]/40 resize-y"></textarea>
                 </div>
 
+                <div id="game-reward-note" class="hidden mb-4 rounded-xl border border-[#14b8a6]/40 bg-[#14b8a6]/10 px-4 py-3 text-xs text-[#bff7ee]" role="status"></div>
+
                 <div class="flex justify-between text-lg font-medium mb-4">
                     <span>Total</span>
                     <span id="cart-total">$0</span>
@@ -1291,16 +1293,23 @@
 
             container.innerHTML = html;
 
-            // Apply discount if unlocked from the game
+            // Apply a still-valid game reward, if one was actually earned.
             let displayTotal = total;
             let discountNote = '';
-            if (window.currentDiscount && Date.now() - (window.currentDiscount.ts || 0) < 1000 * 60 * 60 * 24) {
-                const discounted = Math.floor(total * (1 - window.currentDiscount.percent / 100));
+            const rewardNote = document.getElementById('game-reward-note');
+            const activeReward = getActiveGameDiscount();
+            if (activeReward) {
+                const discounted = total * (1 - activeReward.percent / 100);
                 displayTotal = discounted;
-                discountNote = ` <span class="text-xs text-[#14b8a6]">(${window.currentDiscount.code} -${window.currentDiscount.percent}%)</span>`;
+                discountNote = ` <span class="text-xs text-[#14b8a6]">(${activeReward.code} -${activeReward.percent}%)</span>`;
+                rewardNote.textContent = `Game reward applied: ${activeReward.percent}% off. It will be included at secure checkout.`;
+                rewardNote.classList.remove('hidden');
+            } else if (rewardNote) {
+                rewardNote.textContent = '';
+                rewardNote.classList.add('hidden');
             }
 
-            totalEl.innerHTML = `$${displayTotal}${discountNote}`;
+            totalEl.innerHTML = `$${displayTotal.toFixed(2)}${discountNote}`;
 
         }
 
@@ -1435,10 +1444,11 @@
 
             // Only pass a still-valid game discount (24h window, same as cart UI)
             let discountPayload = null;
-            if (window.currentDiscount && Date.now() - (window.currentDiscount.ts || 0) < 1000 * 60 * 60 * 24) {
+            const activeReward = getActiveGameDiscount();
+            if (activeReward) {
                 discountPayload = {
-                    code: window.currentDiscount.code,
-                    percent: window.currentDiscount.percent
+                    code: activeReward.code,
+                    percent: activeReward.percent
                 };
             }
 
@@ -1682,7 +1692,10 @@
         }
 
         function applyDiscountToCart(code, percent) {
-            window.currentDiscount = { code, percent, ts: Date.now() };
+            const normalizedCode = String(code || '').trim().toUpperCase();
+            const allowed = { HELAART10: 10, HELAART20: 20 };
+            if (allowed[normalizedCode] !== Number(percent)) return;
+            window.currentDiscount = { code: normalizedCode, percent: allowed[normalizedCode], ts: Date.now() };
             // Re-render open cart if visible
             const drawer = document.getElementById('cart-drawer');
             if (drawer && !drawer.classList.contains('hidden')) {
@@ -1699,11 +1712,23 @@
                 const saved = localStorage.getItem('hel_discount');
                 if (saved) {
                     const d = JSON.parse(saved);
-                    if (d && d.code && (Date.now() - (d.ts || 0) < 1000*60*60*24)) {
-                        window.currentDiscount = d;
+                    const code = String(d?.code || '').trim().toUpperCase();
+                    const allowed = { HELAART10: 10, HELAART20: 20 };
+                    if (allowed[code] && (Date.now() - (d.ts || 0) < 1000*60*60*24)) {
+                        window.currentDiscount = { code, percent: allowed[code], ts: d.ts };
                     }
                 }
             } catch (e) {}
+        }
+
+        function getActiveGameDiscount() {
+            const allowed = { HELAART10: 10, HELAART20: 20 };
+            const discount = window.currentDiscount;
+            if (!discount || Date.now() - (discount.ts || 0) >= 1000 * 60 * 60 * 24) return null;
+            const code = String(discount.code || '').trim().toUpperCase();
+            return allowed[code] === Number(discount.percent)
+                ? { code, percent: allowed[code] }
+                : null;
         }
 
         async function initializeEverything() {

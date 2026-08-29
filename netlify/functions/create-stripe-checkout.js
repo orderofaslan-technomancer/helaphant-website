@@ -1,6 +1,13 @@
 const stripe = require('stripe')(process.env.STRIPE_SECRET_KEY);
 const inventory = require('./inventory');
 
+// Game rewards are deliberately limited to these two earned codes.  Never
+// trust a discount percentage sent by the browser on its own.
+const GAME_DISCOUNTS = Object.freeze({
+  HELAART10: 10,
+  HELAART20: 20,
+});
+
 function json(statusCode, body) {
   return {
     statusCode,
@@ -131,10 +138,11 @@ exports.handler = async (event) => {
     let discountPercent = 0;
     let discountCode = '';
     if (discount && typeof discount === 'object') {
-      const p = Number(discount.percent);
-      if (Number.isFinite(p) && p > 0 && p <= 50) {
-        discountPercent = p;
-        discountCode = String(discount.code || 'GAME').slice(0, 40);
+      const requestedCode = String(discount.code || '').trim().toUpperCase();
+      const approvedPercent = GAME_DISCOUNTS[requestedCode];
+      if (approvedPercent) {
+        discountCode = requestedCode;
+        discountPercent = approvedPercent;
       }
     }
 
