@@ -5,16 +5,25 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>WAR HELAPHANT — HEL</title>
     <meta name="description" content="Hand-painted art, clothing, prints, and more by Helaphant. Waging war through art.">
+    <link rel="canonical" href="https://helaphant.com/">
     <meta property="og:title" content="WAR HELAPHANT">
     <meta property="og:description" content="Hand-painted art, clothing, prints, and more by Helaphant. Waging war through art.">
-    <meta property="og:image" content="images/logo.png">
+    <meta property="og:image" content="https://helaphant.com/images/helaphant-share-preview.png">
+    <meta property="og:image:alt" content="Helaphant elephant artwork on a dark background">
+    <meta property="og:image:width" content="1729">
+    <meta property="og:image:height" content="910">
+    <meta property="og:url" content="https://helaphant.com/">
+    <meta name="twitter:card" content="summary_large_image">
+    <meta name="twitter:title" content="WAR HELAPHANT">
+    <meta name="twitter:description" content="Hand-painted art, clothing, prints, and more by Helaphant. Waging war through art.">
+    <meta name="twitter:image" content="https://helaphant.com/images/helaphant-share-preview.png">
     <link rel="icon" href="images/logo.png">
     <script src="https://cdn.tailwindcss.com"></script>
     <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2" onload="window.__supabaseScriptLoaded = true;"></script>
     <script src="https://js.stripe.com/v3/"></script>
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css">
     <style>
-        @import url('https://fonts.googleapis.com/css2?family=Playfair+Display:wght@700&family=Instrument+Sans:wght@400;500;600&amp;family=Space+Grotesk:wght@500;600&amp;display=swap');
+        @import url('https://fonts.googleapis.com/css2?family=Caveat:wght@600&amp;family=Playfair+Display:wght@700&amp;family=Instrument+Sans:wght@400;500;600&amp;family=Space+Grotesk:wght@500;600&amp;display=swap');
         
         :root {
             --bg: #0a0a0a;
@@ -106,6 +115,18 @@
             animation: modalPop 0.2s cubic-bezier(0.32, 0.72, 0, 1);
         }
 
+        /* Keep long product details inside the pop-up rather than scrolling the page beneath it. */
+        .product-modal-backdrop {
+            overflow-y: auto;
+            overscroll-behavior: contain;
+        }
+
+        .product-modal-panel {
+            max-height: calc(100dvh - 2rem);
+            overflow-y: auto;
+            overscroll-behavior: contain;
+        }
+
         @keyframes modalPop {
             from {
                 opacity: 0;
@@ -128,6 +149,27 @@
         .category-card:hover {
             transform: translateY(-4px);
             border-color: #14b8a6;
+        }
+
+        .category-hel-mark {
+            font-family: 'Caveat', cursive;
+            font-size: 3.1rem;
+            line-height: 1;
+            color: #14b8a6;
+            margin-bottom: 0.7rem;
+        }
+
+        .category-print-mark {
+            width: 2.5rem;
+            height: 2.5rem;
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            border: 1px solid rgba(20, 184, 166, 0.8);
+            border-radius: 0.35rem;
+            color: #14b8a6;
+            font-size: 1.35rem;
+            margin-bottom: 1rem;
         }
 
         .nav-scrolled {
@@ -343,11 +385,11 @@
                 <div class="font-semibold">All Work</div>
             </div>
             <div onclick="filterByCategory('originals')" class="category-card cursor-pointer border border-white/10 hover:border-[#14b8a6] surface rounded-3xl p-6 text-center">
-                <i class="fa-solid fa-palette text-3xl mb-4 text-[#14b8a6]"></i>
+                <div class="category-hel-mark">hel</div>
                 <div class="font-semibold">Original Art</div>
             </div>
             <div onclick="filterByCategory('prints')" class="category-card cursor-pointer border border-white/10 hover:border-[#14b8a6] surface rounded-3xl p-6 text-center">
-                <i class="fa-solid fa-image text-3xl mb-4 text-[#14b8a6]"></i>
+                <div class="category-print-mark"><i class="fa-solid fa-skull" aria-hidden="true"></i></div>
                 <div class="font-semibold">Art Prints</div>
                 <div class="text-xs text-[#f5f0e6]/50 mt-0.5">14 pieces</div>
             </div>
@@ -433,9 +475,9 @@
 
     <!-- Product Modal -->
     <div id="product-modal" onclick="if (event.target.id === 'product-modal') closeProductModal()" 
-         class="hidden fixed inset-0 bg-black/90 z-[70] flex items-center justify-center p-4">
+         class="product-modal-backdrop hidden fixed inset-0 bg-black/90 z-[70] flex items-start justify-center p-4 md:items-center">
         <div onclick="event.stopImmediatePropagation()" 
-             class="modal surface border border-white/10 w-full max-w-4xl rounded-3xl overflow-hidden">
+             class="product-modal-panel modal surface border border-white/10 w-full max-w-4xl rounded-3xl">
             
             <div class="grid md:grid-cols-5">
                 <!-- Image side -->
@@ -464,6 +506,10 @@
                         <button id="modal-add-to-cart" onclick="addCurrentProductToCart()"
                                 class="flex-1 py-4 rounded-2xl bg-[#0f766e] hover:bg-[#115e59] font-semibold text-sm tracking-wide transition-colors">
                             ADD TO CART
+                        </button>
+                        <button onclick="shareCurrentProduct()"
+                                class="px-5 border border-white/20 hover:bg-white/5 rounded-2xl text-sm">
+                            SHARE
                         </button>
                         <button onclick="closeProductModal()" 
                                 class="px-6 border border-white/20 hover:bg-white/5 rounded-2xl text-sm">
@@ -986,7 +1032,26 @@
             renderProductGallery();
         }
 
-        function showProductModal(productId) {
+        function productShareUrl(product) {
+            return `https://helaphant.com/?product=${encodeURIComponent(product.id)}`;
+        }
+
+        function syncProductUrl(product) {
+            if (!window.history?.replaceState) return;
+            const url = new URL(window.location.href);
+            url.searchParams.set('product', product.id);
+            window.history.replaceState({}, document.title, `${url.pathname}${url.search}${url.hash}`);
+        }
+
+        function clearProductUrl() {
+            if (!window.history?.replaceState) return;
+            const url = new URL(window.location.href);
+            if (!url.searchParams.has('product')) return;
+            url.searchParams.delete('product');
+            window.history.replaceState({}, document.title, `${url.pathname}${url.search}${url.hash}`);
+        }
+
+        function showProductModal(productId, shouldUpdateUrl = true) {
             const product = products.find(p => p.id === productId);
             if (!product) return;
 
@@ -1030,6 +1095,37 @@
 
             document.getElementById('product-modal').classList.remove('hidden');
             document.getElementById('product-modal').classList.add('flex');
+            document.body.dataset.productModalOverflow = document.body.style.overflow;
+            document.body.style.overflow = 'hidden';
+            if (shouldUpdateUrl) syncProductUrl(product);
+        }
+
+        async function shareCurrentProduct() {
+            if (!currentProduct) return;
+            const url = productShareUrl(currentProduct);
+            const shareData = {
+                title: `${currentProduct.title} — WAR HELAPHANT`,
+                text: currentProduct.description || 'A piece from Helaphant.',
+                url,
+            };
+
+            try {
+                if (navigator.share) {
+                    await navigator.share(shareData);
+                } else {
+                    await navigator.clipboard.writeText(url);
+                    showCheckoutToast('Link copied', 'Send it to anyone you want to share this piece with.');
+                }
+            } catch (error) {
+                if (error?.name !== 'AbortError') {
+                    try {
+                        await navigator.clipboard.writeText(url);
+                        showCheckoutToast('Link copied', 'Send it to anyone you want to share this piece with.');
+                    } catch (_) {
+                        alert(url);
+                    }
+                }
+            }
         }
 
         function selectVariant(element, value, price) {
@@ -1053,6 +1149,9 @@
             const modal = document.getElementById('product-modal');
             modal.classList.remove('flex');
             modal.classList.add('hidden');
+            document.body.style.overflow = document.body.dataset.productModalOverflow || '';
+            delete document.body.dataset.productModalOverflow;
+            clearProductUrl();
             currentProduct = null;
         }
 
@@ -1518,6 +1617,8 @@
 
             // Render products
             renderProducts(products);
+            const sharedProductId = Number(new URLSearchParams(window.location.search).get('product'));
+            if (Number.isInteger(sharedProductId)) showProductModal(sharedProductId, false);
             
             console.log('%c[Helaphant] Product catalog initialized with ' + products.length + ' items', 'color:#555');
         }
