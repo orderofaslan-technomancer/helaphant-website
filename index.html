@@ -1387,6 +1387,42 @@
             }, 6500);
         }
 
+        function showOrderThankYou(detail) {
+            const backdrop = document.createElement('div');
+            backdrop.className = 'fixed inset-0 z-[100] flex items-center justify-center bg-black/85 p-5';
+            backdrop.setAttribute('role', 'dialog');
+            backdrop.setAttribute('aria-modal', 'true');
+            backdrop.setAttribute('aria-label', 'Order confirmation');
+
+            const panel = document.createElement('div');
+            panel.className = 'modal surface w-full max-w-md rounded-3xl border border-[#14b8a6]/40 p-8 text-center shadow-2xl';
+            panel.innerHTML = `
+                <div class="mx-auto mb-5 flex h-14 w-14 items-center justify-center rounded-full border border-[#14b8a6]/50 bg-[#14b8a6]/10 text-2xl text-[#14b8a6]">
+                    <i class="fa-solid fa-heart" aria-hidden="true"></i>
+                </div>
+                <h2 class="heading-serif text-4xl leading-none tracking-[-1.5px]">Thank you for<br>your order.</h2>
+            `;
+
+            const message = document.createElement('p');
+            message.className = 'mt-5 text-sm leading-relaxed text-[#f5f0e6]/75';
+            message.textContent = detail;
+            panel.appendChild(message);
+
+            const close = document.createElement('button');
+            close.type = 'button';
+            close.className = 'mt-7 w-full rounded-2xl bg-[#14b8a6] px-5 py-3 text-sm font-semibold text-[#0a0a0a] transition-colors hover:bg-[#d4b17f]';
+            close.textContent = 'CONTINUE EXPLORING';
+            close.addEventListener('click', () => backdrop.remove());
+            panel.appendChild(close);
+
+            backdrop.addEventListener('click', (event) => {
+                if (event.target === backdrop) backdrop.remove();
+            });
+            backdrop.appendChild(panel);
+            document.body.appendChild(backdrop);
+            close.focus();
+        }
+
         function handleCheckoutReturn() {
             const params = new URLSearchParams(window.location.search);
             const status = params.get('checkout');
@@ -1397,11 +1433,10 @@
                 cart = [];
                 updateCartCount();
                 try { localStorage.removeItem('hel_cart'); } catch (e) {}
-                showCheckoutToast(
-                    'Payment received — thank you!',
+                showOrderThankYou(
                     includesPetPortrait
                         ? "Helaphant will email you shortly to request your favorite pet photos. Please allow up to two weeks after we receive your references for completion."
-                        : "You'll get a Stripe receipt by email."
+                        : "Helaphant will send an email with tracking soon. Your Stripe receipt is on its way, too."
                 );
                 try { sessionStorage.removeItem('hel_pending_pet_portrait_order'); } catch (e) {}
                 const sessionId = params.get('session_id');
