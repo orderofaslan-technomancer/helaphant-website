@@ -99,6 +99,82 @@
             text-shadow: 0 2px 30px rgba(0, 0, 0, 0.6);
         }
 
+        .forest-intro {
+            position: fixed;
+            inset: 0;
+            z-index: 200;
+            overflow: hidden;
+            background: #050706;
+            opacity: 1;
+            transition: opacity .85s ease, visibility .85s ease;
+        }
+
+        .forest-intro.is-leaving {
+            opacity: 0;
+            visibility: hidden;
+            pointer-events: none;
+        }
+
+        .forest-intro canvas {
+            width: 100%;
+            height: 100%;
+            display: block;
+        }
+
+        .forest-intro-mark {
+            position: absolute;
+            inset: 0;
+            display: grid;
+            place-content: center;
+            justify-items: center;
+            pointer-events: none;
+            opacity: 0;
+            filter: blur(16px);
+            transform: scale(.84);
+            animation: forestMarkReveal 3.2s ease 1.05s forwards;
+        }
+
+        .forest-intro-mark img {
+            width: min(43vw, 310px);
+            max-height: 43vh;
+            object-fit: contain;
+            filter: drop-shadow(0 0 28px rgba(166, 178, 127, .34));
+        }
+
+        .forest-intro-mark span {
+            margin-top: 18px;
+            color: #d8d4c3;
+            font: 500 11px/1.2 'Space Mono', monospace;
+            letter-spacing: 5px;
+            text-transform: uppercase;
+            text-shadow: 0 2px 14px #000;
+        }
+
+        .forest-intro-skip {
+            position: absolute;
+            right: max(20px, env(safe-area-inset-right));
+            bottom: max(20px, env(safe-area-inset-bottom));
+            padding: 9px 13px;
+            border: 1px solid rgba(245, 240, 230, .25);
+            border-radius: 999px;
+            color: rgba(245, 240, 230, .72);
+            background: rgba(5, 7, 6, .46);
+            backdrop-filter: blur(8px);
+            font: 500 10px/1 'Space Mono', monospace;
+            letter-spacing: 2px;
+            text-transform: uppercase;
+        }
+
+        @keyframes forestMarkReveal {
+            0% { opacity: 0; filter: blur(16px); transform: scale(.84); }
+            45% { opacity: .92; }
+            100% { opacity: 1; filter: blur(0); transform: scale(1); }
+        }
+
+        @media (prefers-reduced-motion: reduce) {
+            .forest-intro-mark { animation-duration: .01ms; animation-delay: 0s; }
+        }
+
         .subtle-grid {
             background-image: 
                 linear-gradient(rgba(255,255,255,0.015) 1px, transparent 1px),
@@ -143,6 +219,87 @@
             to {
                 opacity: 1;
                 transform: translateY(0) scale(1);
+            }
+        }
+
+        .order-celebration {
+            position: fixed;
+            inset: 0;
+            z-index: 120;
+            overflow: hidden;
+            pointer-events: none;
+        }
+
+        .glitter-piece {
+            position: absolute;
+            left: 50%;
+            top: 45%;
+            width: var(--size);
+            height: calc(var(--size) * 0.42);
+            border-radius: 999px;
+            background: var(--color);
+            box-shadow: 0 0 8px color-mix(in srgb, var(--color) 75%, transparent);
+            animation: glitterBurst var(--duration) cubic-bezier(.16,.72,.22,1) var(--delay) both;
+        }
+
+        .tactical-fairy-flight {
+            position: absolute;
+            top: 20%;
+            left: 0;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            filter: drop-shadow(0 8px 14px rgba(0,0,0,.55));
+            animation: fairyFlyby 4.8s cubic-bezier(.24,.65,.32,1) .35s both;
+        }
+
+        .tactical-fairy {
+            display: block;
+            width: auto;
+            height: 180px;
+            transform: rotate(-4deg);
+        }
+
+        .fairy-banner {
+            position: relative;
+            white-space: nowrap;
+            border: 1px solid #b8a88a;
+            background: #7d8663;
+            color: #0a0a0a;
+            padding: 10px 18px;
+            font-family: 'Space Grotesk', system_ui, sans-serif;
+            font-size: 12px;
+            font-weight: 700;
+            letter-spacing: 1.6px;
+            clip-path: polygon(0 0, 100% 0, 94% 50%, 100% 100%, 0 100%, 5% 50%);
+        }
+
+        @keyframes glitterBurst {
+            0% { transform: translate(-50%, -50%) rotate(0deg) scale(.2); opacity: 0; }
+            12% { opacity: 1; }
+            100% { transform: translate(calc(-50% + var(--x)), calc(-50% + var(--y))) rotate(var(--spin)) scale(1); opacity: 0; }
+        }
+
+        @keyframes fairyFlyby {
+            0% { transform: translateX(-125%) translateY(30px) rotate(-4deg); opacity: 0; }
+            10% { opacity: 1; }
+            42% { transform: translateX(calc(50vw - 50%)) translateY(-8px) rotate(2deg); }
+            75% { opacity: 1; }
+            100% { transform: translateX(calc(100vw + 20px)) translateY(18px) rotate(-2deg); opacity: 0; }
+        }
+
+        @media (max-width: 520px) {
+            .tactical-fairy { width: auto; height: 120px; }
+            .fairy-banner { padding: 8px 12px; font-size: 9px; letter-spacing: 1px; }
+        }
+
+        @media (prefers-reduced-motion: reduce) {
+            .glitter-piece { display: none; }
+            .tactical-fairy-flight {
+                left: 50%;
+                top: 15%;
+                transform: translateX(-50%);
+                animation: none;
             }
         }
 
@@ -198,6 +355,15 @@
     </style>
 </head>
 <body class="dark-bg text-[#f5f0e6] overflow-x-hidden">
+    <div id="forest-intro" class="forest-intro" aria-label="Helaphant opening animation">
+        <canvas id="forest-intro-canvas" aria-hidden="true"></canvas>
+        <div class="forest-intro-mark">
+            <img src="images/logo.png" alt="Helaphant">
+            <span>Waging war through art</span>
+        </div>
+        <button id="forest-intro-skip" class="forest-intro-skip" type="button">Skip intro</button>
+    </div>
+
     <!-- Navigation -->
     <nav id="navbar" class="fixed top-0 left-0 right-0 z-50 border-b border-white/10 transition-all duration-300">
         <div class="max-w-7xl mx-auto px-8">
@@ -1388,6 +1554,7 @@
         }
 
         function showOrderThankYou(detail) {
+            launchOrderCelebration();
             const backdrop = document.createElement('div');
             backdrop.className = 'fixed inset-0 z-[100] flex items-center justify-center bg-black/85 p-5';
             backdrop.setAttribute('role', 'dialog');
@@ -1421,6 +1588,38 @@
             backdrop.appendChild(panel);
             document.body.appendChild(backdrop);
             close.focus();
+        }
+
+        function launchOrderCelebration() {
+            const celebration = document.createElement('div');
+            celebration.className = 'order-celebration';
+            celebration.setAttribute('aria-hidden', 'true');
+
+            const colors = ['#14b8a6', '#d4b17f', '#f5f0e6', '#7d8663', '#f2a7c3'];
+            for (let i = 0; i < 72; i++) {
+                const glitter = document.createElement('span');
+                const angle = Math.random() * Math.PI * 2;
+                const distance = 110 + Math.random() * Math.min(window.innerWidth, 520) * .8;
+                glitter.className = 'glitter-piece';
+                glitter.style.setProperty('--x', `${Math.cos(angle) * distance}px`);
+                glitter.style.setProperty('--y', `${Math.sin(angle) * distance}px`);
+                glitter.style.setProperty('--spin', `${Math.round(Math.random() * 900 - 450)}deg`);
+                glitter.style.setProperty('--size', `${5 + Math.random() * 9}px`);
+                glitter.style.setProperty('--duration', `${1.1 + Math.random() * 1.2}s`);
+                glitter.style.setProperty('--delay', `${Math.random() * .18}s`);
+                glitter.style.setProperty('--color', colors[i % colors.length]);
+                celebration.appendChild(glitter);
+            }
+
+            const flight = document.createElement('div');
+            flight.className = 'tactical-fairy-flight';
+            flight.innerHTML = `
+                <img src="images/tactical-fairy-v2.png" class="tactical-fairy" alt="">
+                <div class="fairy-banner">THANK YOU FOR YOUR SUPPORT</div>
+            `;
+            celebration.appendChild(flight);
+            document.body.appendChild(celebration);
+            setTimeout(() => celebration.remove(), 5600);
         }
 
         function handleCheckoutReturn() {
@@ -1814,7 +2013,209 @@
                 : null;
         }
 
+        function initForestIntro() {
+            const intro = document.getElementById('forest-intro');
+            const canvas = document.getElementById('forest-intro-canvas');
+            const skip = document.getElementById('forest-intro-skip');
+            if (!intro || !canvas) return;
+
+            const params = new URLSearchParams(window.location.search);
+            const forcePreview = params.get('intro') === '1';
+            const isCheckoutReturn = params.has('checkout');
+            let alreadySeen = false;
+            try { alreadySeen = sessionStorage.getItem('helaphant_intro_seen') === '1'; } catch (error) {}
+            if ((!forcePreview && alreadySeen) || isCheckoutReturn) {
+                intro.remove();
+                return;
+            }
+
+            const reducedMotion = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+            const context = canvas.getContext('2d', { alpha: false });
+            if (!context) {
+                intro.remove();
+                return;
+            }
+
+            const previousOverflow = document.body.style.overflow;
+            document.body.style.overflow = 'hidden';
+            let width = 0;
+            let height = 0;
+            let ratio = 1;
+            let frame = 0;
+            let ended = false;
+            let lastPaint = 0;
+            const seed = (number) => {
+                const value = Math.sin(number * 9283.17) * 43758.5453;
+                return value - Math.floor(value);
+            };
+            const treeCount = window.innerWidth < 600 ? 28 : 44;
+            const trees = Array.from({ length: treeCount }, (_, index) => ({
+                x: seed(index + 3) * 2 - 1,
+                z: .08 + seed(index + 27) * .92,
+                lean: (seed(index + 83) - .5) * .09,
+                width: .65 + seed(index + 151) * .8
+            }));
+
+            function resizeForest() {
+                width = window.innerWidth;
+                height = window.innerHeight;
+                ratio = Math.min(window.devicePixelRatio || 1, 1.5);
+                canvas.width = Math.round(width * ratio);
+                canvas.height = Math.round(height * ratio);
+                canvas.style.width = `${width}px`;
+                canvas.style.height = `${height}px`;
+                context.setTransform(ratio, 0, 0, ratio, 0, 0);
+            }
+
+            function drawTree(tree, elapsed) {
+                const travel = reducedMotion ? 0 : elapsed * .000035;
+                const depth = (tree.z - travel + 1) % 1;
+                const perspective = 1 / (.22 + depth * 1.55);
+                const x = width / 2 + tree.x * width * (.18 + depth * .58) * perspective;
+                const ground = height * (.96 - depth * .22);
+                const treeHeight = height * .24 * perspective;
+                const trunk = Math.max(1.2, 7 * tree.width * perspective);
+                const opacity = .24 + (1 - depth) * .62;
+
+                context.save();
+                context.translate(x, ground);
+                context.rotate(tree.lean);
+                context.strokeStyle = `rgba(7, 12, 8, ${opacity})`;
+                context.lineCap = 'round';
+                context.lineWidth = trunk;
+                context.beginPath();
+                context.moveTo(0, 12);
+                context.lineTo(0, -treeHeight);
+                context.stroke();
+
+                // Root flares visually lock each trunk into the forest floor.
+                context.lineWidth = Math.max(1, trunk * .48);
+                context.beginPath();
+                context.moveTo(0, 2);
+                context.quadraticCurveTo(-trunk * 1.4, 9, -trunk * 3.4, 15);
+                context.moveTo(0, 3);
+                context.quadraticCurveTo(trunk * 1.2, 10, trunk * 3.1, 16);
+                context.moveTo(0, 5);
+                context.lineTo(-trunk * .8, 19);
+                context.stroke();
+
+                context.lineWidth = Math.max(1, trunk * .32);
+                const levels = 6;
+                for (let level = 1; level <= levels; level++) {
+                    const y = -treeHeight * (.18 + level * .115);
+                    const spread = treeHeight * (.12 + (levels - level) * .018);
+                    context.beginPath();
+                    context.moveTo(0, y + spread * .17);
+                    context.lineTo(-spread, y - spread * .22);
+                    context.moveTo(0, y);
+                    context.lineTo(spread * .9, y - spread * .28);
+                    context.stroke();
+                }
+                context.restore();
+            }
+
+            function drawForest(timestamp) {
+                if (ended) return;
+                if (timestamp - lastPaint < 31) {
+                    frame = requestAnimationFrame(drawForest);
+                    return;
+                }
+                lastPaint = timestamp;
+                const elapsed = timestamp - startTime;
+                const sky = context.createLinearGradient(0, 0, 0, height);
+                sky.addColorStop(0, '#111711');
+                sky.addColorStop(.56, '#31392e');
+                sky.addColorStop(1, '#080b08');
+                context.fillStyle = sky;
+                context.fillRect(0, 0, width, height);
+
+                // Layered Appalachian ridgelines recede into the haze.
+                const ridgeLayers = [
+                    { y: .43, color: 'rgba(31, 43, 34, .72)', amp: .055, speed: .000004 },
+                    { y: .53, color: 'rgba(20, 30, 23, .84)', amp: .075, speed: .000008 },
+                    { y: .63, color: 'rgba(11, 18, 13, .96)', amp: .095, speed: .000012 }
+                ];
+                ridgeLayers.forEach((ridge, layer) => {
+                    context.beginPath();
+                    context.moveTo(0, height);
+                    for (let x = 0; x <= width + 30; x += 30) {
+                        const roll = Math.sin(x * .007 + layer * 2.1 + elapsed * ridge.speed) * height * ridge.amp;
+                        const broken = Math.sin(x * .019 + layer) * height * ridge.amp * .28;
+                        context.lineTo(x, height * ridge.y + roll + broken);
+                    }
+                    context.lineTo(width, height);
+                    context.closePath();
+                    context.fillStyle = ridge.color;
+                    context.fill();
+                });
+
+                // A sloped, shadowed forest floor gives every near tree a place to land.
+                const floor = context.createLinearGradient(0, height * .67, 0, height);
+                floor.addColorStop(0, 'rgba(12, 19, 13, .15)');
+                floor.addColorStop(.35, 'rgba(7, 12, 8, .78)');
+                floor.addColorStop(1, '#030504');
+                context.fillStyle = floor;
+                context.beginPath();
+                context.moveTo(0, height * .74);
+                for (let x = 0; x <= width + 40; x += 40) {
+                    context.lineTo(x, height * (.75 + Math.sin(x * .013) * .018));
+                }
+                context.lineTo(width, height);
+                context.lineTo(0, height);
+                context.closePath();
+                context.fill();
+
+                trees.slice().sort((a, b) => b.z - a.z).forEach(tree => drawTree(tree, elapsed));
+
+                // Soft fog banks drift sideways through the hollows and between trunks.
+                for (let layer = 0; layer < 7; layer++) {
+                    const drift = Math.sin(elapsed * .00019 + layer * 1.7) * width * .16;
+                    const fog = context.createRadialGradient(
+                        width * (-.08 + layer * .19) + drift,
+                        height * (.42 + layer * .065),
+                        0,
+                        width * (-.08 + layer * .19) + drift,
+                        height * (.42 + layer * .065),
+                        Math.max(width, height) * (.31 + layer * .022)
+                    );
+                    fog.addColorStop(0, `rgba(204, 207, 192, ${.13 + layer * .012})`);
+                    fog.addColorStop(.42, `rgba(171, 181, 164, ${.075 + layer * .008})`);
+                    fog.addColorStop(1, 'rgba(190, 196, 174, 0)');
+                    context.fillStyle = fog;
+                    context.fillRect(0, 0, width, height);
+                }
+
+                const groundMist = context.createLinearGradient(0, height * .53, 0, height);
+                groundMist.addColorStop(0, 'rgba(211, 214, 201, 0)');
+                groundMist.addColorStop(.34, 'rgba(191, 198, 183, .17)');
+                groundMist.addColorStop(.58, 'rgba(137, 149, 132, .1)');
+                groundMist.addColorStop(1, 'rgba(29, 38, 31, 0)');
+                context.fillStyle = groundMist;
+                context.fillRect(0, height * .48, width, height * .52);
+                frame = requestAnimationFrame(drawForest);
+            }
+
+            function finishIntro() {
+                if (ended) return;
+                ended = true;
+                cancelAnimationFrame(frame);
+                window.removeEventListener('resize', resizeForest);
+                try { sessionStorage.setItem('helaphant_intro_seen', '1'); } catch (error) {}
+                intro.classList.add('is-leaving');
+                document.body.style.overflow = previousOverflow;
+                setTimeout(() => intro.remove(), 900);
+            }
+
+            resizeForest();
+            const startTime = performance.now();
+            frame = requestAnimationFrame(drawForest);
+            window.addEventListener('resize', resizeForest, { passive: true });
+            skip.addEventListener('click', finishIntro);
+            setTimeout(finishIntro, reducedMotion ? 1500 : 5700);
+        }
+
         async function initializeEverything() {
+            initForestIntro();
             initializeTailwind();
             initNavbar();
             await initProducts();           // Now properly waits for Supabase or fallback
